@@ -5,8 +5,11 @@ import platform
 import datetime
 import subprocess
 import socket
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Tuple
 import os
+import threading
+import time
+from collections import deque
 
 app = Flask(__name__)
 
@@ -18,6 +21,12 @@ if os.environ.get('FLASK_DEBUG', 'False').lower() == 'true':
 if platform.machine().startswith('arm'):
     # Detect ARM architecture (Raspberry Pi)
     app.config['THREADED'] = False
+
+# Temperature history storage
+# Store tuples of (timestamp, temperature)
+temperature_history = deque(maxlen=120)  # 10 minutes at 5-second intervals (10*60/5 = 120)
+temperature_lock = threading.Lock()
+latest_temperature = None
 
 def get_size(bytes: float, suffix: str = "B") -> str:
     """Convert bytes to human readable format"""
@@ -50,6 +59,25 @@ def get_cpu_temperature() -> Optional[float]:
     except (subprocess.TimeoutExpired, subprocess.SubprocessError, ValueError, IndexError, FileNotFoundError):
         pass
     return None
+
+def sample_temperature():
+    """Background thread to sample CPU temperature every 5 seconds"""
+    global latest_temperature
+    while True:
+        try:
+            temp = get_cpu_temperature()
+            if temp is not None:
+                timestamp = datetime.datetime.now().isoformat()
+                with temperature_lock:
+                    temperature_history.append((timestamp, temp))
+                    latest_temperature = temp
+        except Exception as e:
+            print(f"Error sampling temperature: {e}")
+        time.sleep(5)  # Sample every 5 seconds
+
+# Start temperature sampling thread
+temperature_thread = threading.Thread(target=sample_temperature, daemon=True)
+temperature_thread.start()
 
 def get_system_info() -> Dict[str, Any]:
     """Gather system information"""
@@ -158,9 +186,9 @@ def stats_api():
             'timestamp': datetime.datetime.now().isoformat()
         }
         
-        # CPU temperature for Raspberry Pi
-        temp = get_cpu_temperature()
-        stats['cpu_temp'] = temp
+        # Use stored temperature instead of real-time reading
+        with temperature_lock:
+            stats['cpu_temp'] = latest_temperature
         
         response = jsonify(stats)
         # Add explicit CORS headers for development
@@ -169,6 +197,26 @@ def stats_api():
         return response
     except Exception as e:
         print(f"Error in stats_api: {e}")  # Log the actual error
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/temperature-history')
+def temperature_history_api():
+    """API endpoint for temperature history"""
+    try:
+        with temperature_lock:
+            # Convert deque to list of dictionaries for JSON serialization
+            history = [
+                {'timestamp': ts, 'temperature': temp} 
+                for ts, temp in temperature_history
+            ]
+        
+        response = jsonify({'history': history})
+        # Add explicit CORS headers for development
+        if os.environ.get('FLASK_DEBUG', 'False').lower() == 'true':
+            response.headers['Access-Control-Allow-Origin'] = '*'
+        return response
+    except Exception as e:
+        print(f"Error in temperature_history_api: {e}")
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':

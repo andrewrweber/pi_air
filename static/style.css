@@ -156,3 +156,24 @@ h1 {
         font-size: 2em;
     }
 }
+
+.temperature-section {
+    margin-top: 2rem;
+    background: white;
+    padding: 1.5rem;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.temperature-section h2 {
+    color: #c51a4a;
+    margin-top: 0;
+    margin-bottom: 1rem;
+}
+
+.temperature-section > div {
+    position: relative;
+    height: 300px;
+    width: 100%;
+}
