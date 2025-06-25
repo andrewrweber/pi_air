@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raspberry Pi System Monitor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>🍓 Raspberry Pi System Monitor</h1>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h2>CPU</h2>
+                <div class="stat-value" id="cpu-usage">Loading...</div>
+                <div class="stat-label">Usage</div>
+                <div class="stat-value" id="cpu-temp">Loading...</div>
+                <div class="stat-label">Temperature</div>
+            </div>
+            
+            <div class="stat-card">
+                <h2>Memory</h2>
+                <div class="stat-value" id="memory-usage">Loading...</div>
+                <div class="stat-label">Usage</div>
+                <div class="stat-detail" id="memory-detail"></div>
+            </div>
+            
+            <div class="stat-card">
+                <h2>System Info</h2>
+                <div id="system-info" class="info-list"></div>
+            </div>
+            
+            <div class="stat-card">
+                <h2>Network</h2>
+                <div id="network-info" class="info-list"></div>
+            </div>
+        </div>
+        
+        <div class="disk-section">
+            <h2>Disk Usage</h2>
+            <div id="disk-info"></div>
+        </div>
+        
+        <div class="footer">
+            <p>Last updated: <span id="last-update">Never</span></p>
+        </div>
+    </div>
+    
+    <script>
+        // Function to fetch and display system information
+        async function fetchSystemInfo() {
+            try {
+                const response = await fetch('/api/system');
+                const data = await response.json();
+                
+                // Update system info
+                const systemInfo = document.getElementById('system-info');
+                systemInfo.innerHTML = `
+                    <div class="info-item"><strong>Hostname:</strong> ${data.hostname}</div>
+                    <div class="info-item"><strong>Platform:</strong> ${data.platform} ${data.platform_release}</div>
+                    <div class="info-item"><strong>Architecture:</strong> ${data.architecture}</div>
+                    <div class="info-item"><strong>Boot Time:</strong> ${data.boot_time}</div>
+                    <div class="info-item"><strong>CPU Cores:</strong> ${data.physical_cores} physical, ${data.total_cores} total</div>
+                `;
+                
+                // Update memory details
+                document.getElementById('memory-detail').textContent = 
+                    `${data.memory_used} / ${data.memory_total}`;
+                
+                // Update network info
+                const networkInfo = document.getElementById('network-info');
+                networkInfo.innerHTML = data.network_info.map(net => 
+                    `<div class="info-item"><strong>${net.interface}:</strong> ${net.ip}</div>`
+                ).join('');
+                
+                // Update disk info
+                const diskInfo = document.getElementById('disk-info');
+                diskInfo.innerHTML = data.disk_info.map(disk => `
+                    <div class="disk-item">
+                        <div class="disk-header">
+                            <strong>${disk.device}</strong> (${disk.file_system}) - ${disk.mountpoint}
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${disk.percentage}"></div>
+                        </div>
+                        <div class="disk-details">
+                            ${disk.used} used of ${disk.total_size} (${disk.free} free)
+                        </div>
+                    </div>
+                `).join('');
+                
+            } catch (error) {
+                console.error('Error fetching system info:', error);
+            }
+        }
+        
+        // Function to fetch real-time stats
+        async function fetchStats() {
+            try {
+                const response = await fetch('/api/stats');
+                const data = await response.json();
+                
+                // Update CPU usage
+                document.getElementById('cpu-usage').textContent = `${data.cpu_percent.toFixed(1)}%`;
+                
+                // Update CPU temperature
+                if (data.cpu_temp !== null) {
+                    document.getElementById('cpu-temp').textContent = `${data.cpu_temp.toFixed(1)}°C`;
+                } else {
+                    document.getElementById('cpu-temp').textContent = 'N/A';
+                }
+                
+                // Update memory usage
+                document.getElementById('memory-usage').textContent = `${data.memory_percent.toFixed(1)}%`;
+                
+                // Update last update time
+                document.getElementById('last-update').textContent = 
+                    new Date(data.timestamp).toLocaleTimeString();
+                
+            } catch (error) {
+                console.error('Error fetching stats:', error);
+            }
+        }
+        
+        // Initial load
+        fetchSystemInfo();
+        fetchStats();
+        
+        // Update stats every 2 seconds
+        setInterval(fetchStats, 2000);
+        
+        // Update full system info every 30 seconds
+        setInterval(fetchSystemInfo, 30000);
+    </script>
+</body>
+</html>
