@@ -6,8 +6,6 @@
     <title>Raspberry Pi System Monitor</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/date-fns@2.29.3/index.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -47,7 +45,9 @@
         
         <div class="temperature-section">
             <h2>CPU Temperature History (10 minutes)</h2>
-            <canvas id="temperatureChart" width="400" height="200"></canvas>
+            <div style="position: relative; height:300px; width:100%;">
+                <canvas id="temperatureChart"></canvas>
+            </div>
         </div>
         
         <div class="footer">
@@ -75,14 +75,6 @@
                 maintainAspectRatio: false,
                 scales: {
                     x: {
-                        type: 'time',
-                        time: {
-                            parser: 'YYYY-MM-DDTHH:mm:ss',
-                            tooltipFormat: 'HH:mm:ss',
-                            displayFormats: {
-                                second: 'HH:mm:ss'
-                            }
-                        },
                         title: {
                             display: true,
                             text: 'Time'
@@ -111,13 +103,17 @@
                 const response = await fetch('/api/temperature-history');
                 const data = await response.json();
                 
-                if (data.history) {
-                    const labels = data.history.map(item => item.timestamp);
+                if (data.history && data.history.length > 0) {
+                    // Format timestamps as HH:MM:SS
+                    const labels = data.history.map(item => {
+                        const date = new Date(item.timestamp);
+                        return date.toLocaleTimeString();
+                    });
                     const temperatures = data.history.map(item => item.temperature);
                     
                     temperatureChart.data.labels = labels;
                     temperatureChart.data.datasets[0].data = temperatures;
-                    temperatureChart.update();
+                    temperatureChart.update('none'); // Disable animation for performance
                 }
             } catch (error) {
                 console.error('Error fetching temperature history:', error);

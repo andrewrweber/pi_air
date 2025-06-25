@@ -163,6 +163,7 @@ h1 {
     padding: 1.5rem;
     border-radius: 10px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
 }
 
 .temperature-section h2 {
@@ -171,7 +172,8 @@ h1 {
     margin-bottom: 1rem;
 }
 
-#temperatureChart {
-    max-width: 100%;
+.temperature-section > div {
+    position: relative;
     height: 300px;
+    width: 100%;
 }
