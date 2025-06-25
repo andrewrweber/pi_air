@@ -127,11 +127,11 @@
         fetchSystemInfo();
         fetchStats();
         
-        // Update stats every 2 seconds
-        setInterval(fetchStats, 2000);
+        // Update stats every 5 seconds (reduced frequency for Pi Zero 2 W)
+        setInterval(fetchStats, 5000);
         
-        // Update full system info every 30 seconds
-        setInterval(fetchSystemInfo, 30000);
+        // Update full system info every 60 seconds (reduced frequency for Pi Zero 2 W)
+        setInterval(fetchSystemInfo, 60000);
     </script>
 </body>
 </html>
