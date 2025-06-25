@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Raspberry Pi System Monitor</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/date-fns@2.29.3/index.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -42,12 +45,85 @@
             <div id="disk-info"></div>
         </div>
         
+        <div class="temperature-section">
+            <h2>CPU Temperature History (10 minutes)</h2>
+            <canvas id="temperatureChart" width="400" height="200"></canvas>
+        </div>
+        
         <div class="footer">
             <p>Last updated: <span id="last-update">Never</span></p>
         </div>
     </div>
     
     <script>
+        // Initialize temperature chart
+        const ctx = document.getElementById('temperatureChart').getContext('2d');
+        const temperatureChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'CPU Temperature (°C)',
+                    data: [],
+                    borderColor: 'rgb(255, 99, 132)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            parser: 'YYYY-MM-DDTHH:mm:ss',
+                            tooltipFormat: 'HH:mm:ss',
+                            displayFormats: {
+                                second: 'HH:mm:ss'
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Time'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Temperature (°C)'
+                        },
+                        suggestedMin: 30,
+                        suggestedMax: 80
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+        
+        // Function to fetch and update temperature history
+        async function fetchTemperatureHistory() {
+            try {
+                const response = await fetch('/api/temperature-history');
+                const data = await response.json();
+                
+                if (data.history) {
+                    const labels = data.history.map(item => item.timestamp);
+                    const temperatures = data.history.map(item => item.temperature);
+                    
+                    temperatureChart.data.labels = labels;
+                    temperatureChart.data.datasets[0].data = temperatures;
+                    temperatureChart.update();
+                }
+            } catch (error) {
+                console.error('Error fetching temperature history:', error);
+            }
+        }
+        
         // Function to fetch and display system information
         async function fetchSystemInfo() {
             try {
@@ -126,9 +202,13 @@
         // Initial load
         fetchSystemInfo();
         fetchStats();
+        fetchTemperatureHistory();
         
         // Update stats every 5 seconds (reduced frequency for Pi Zero 2 W)
         setInterval(fetchStats, 5000);
+        
+        // Update temperature history every 5 seconds to match sampling rate
+        setInterval(fetchTemperatureHistory, 5000);
         
         // Update full system info every 60 seconds (reduced frequency for Pi Zero 2 W)
         setInterval(fetchSystemInfo, 60000);
