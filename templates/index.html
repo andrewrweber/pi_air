@@ -367,38 +367,12 @@
                 const response = await fetch('/api/air-quality-history');
                 const data = await response.json();
                 
+                console.log('Air quality data received:', data);
+                
                 if (data.hourly_averages && data.hourly_averages.length > 0) {
-                    // Fill in missing hours for the last 24 hours
-                    const now = new Date();
-                    const fullData = [];
-                    
-                    // Create map of existing data
-                    const dataMap = {};
-                    data.hourly_averages.forEach(item => {
-                        dataMap[item.hour] = item;
-                    });
-                    
-                    // Generate all hours for the last 24 hours
-                    for (let i = 23; i >= 0; i--) {
-                        const hour = new Date(now);
-                        hour.setHours(hour.getHours() - i);
-                        hour.setMinutes(0, 0, 0);
-                        const hourStr = hour.toISOString().slice(0, 13) + ':00:00';
-                        
-                        if (dataMap[hourStr]) {
-                            fullData.push(dataMap[hourStr]);
-                        } else {
-                            fullData.push({
-                                hour: hourStr,
-                                avg_pm2_5: null,
-                                avg_pm10: null,
-                                avg_aqi: null
-                            });
-                        }
-                    }
-                    
+                    // Use actual data only - don't fill gaps yet
                     // Prepare data for chart
-                    const labels = fullData.map(item => {
+                    const labels = data.hourly_averages.map(item => {
                         const date = new Date(item.hour);
                         return date.toLocaleString('en-US', { 
                             month: 'short', 
@@ -407,9 +381,12 @@
                         });
                     });
                     
-                    const pm25Data = fullData.map(item => item.avg_pm2_5);
-                    const pm10Data = fullData.map(item => item.avg_pm10);
-                    const aqiData = fullData.map(item => item.avg_aqi);
+                    const pm25Data = data.hourly_averages.map(item => item.avg_pm2_5);
+                    const pm10Data = data.hourly_averages.map(item => item.avg_pm10);
+                    const aqiData = data.hourly_averages.map(item => item.avg_aqi);
+                    
+                    console.log('Chart data arrays:', { pm25Data, pm10Data, aqiData });
+                    console.log('Non-null PM2.5 values:', pm25Data.filter(v => v !== null));
                     
                     // Calculate dynamic max values for better scaling
                     const maxPM = Math.max(
@@ -446,6 +423,14 @@
                         `;
                         document.getElementById('db-stats').innerHTML = statsHtml;
                     }
+                } else {
+                    console.log('No hourly averages data available');
+                    // Show empty chart with message
+                    airQualityChart.data.labels = ['No data available'];
+                    airQualityChart.data.datasets[0].data = [];
+                    airQualityChart.data.datasets[1].data = [];
+                    airQualityChart.data.datasets[2].data = [];
+                    airQualityChart.update();
                 }
                 
             } catch (error) {
