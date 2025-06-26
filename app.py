@@ -11,7 +11,7 @@ import threading
 import time
 from collections import deque
 import logging
-from database import get_latest_reading, get_hourly_averages_24h, get_database_stats
+from database import get_latest_reading, get_hourly_averages_24h, get_15min_averages_24h, get_database_stats
 
 app = Flask(__name__)
 
@@ -273,14 +273,14 @@ def temperature_history_api():
 def air_quality_history_api():
     """API endpoint for 24-hour air quality history"""
     try:
-        # Get hourly averages for the chart
-        hourly_data = get_hourly_averages_24h()
+        # Get 15-minute averages for the chart
+        interval_data = get_15min_averages_24h()
         
         # Get database stats
         db_stats = get_database_stats()
         
         response_data = {
-            'hourly_averages': hourly_data,
+            'interval_averages': interval_data,
             'stats': db_stats
         }
         

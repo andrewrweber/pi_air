@@ -73,7 +73,7 @@
                 </div>
                 
                 <div class="air-quality-section" id="air-quality-history-section">
-                    <h2>Air Quality History (24 hours)</h2>
+                    <h2>Air Quality History (24 hours, 15-minute intervals)</h2>
                     <div style="position: relative; height:400px; width:100%;">
                         <canvas id="airQualityChart"></canvas>
                     </div>
@@ -368,10 +368,10 @@
                 const data = await response.json();
                 
                 console.log('Air quality data received:', data);
-                console.log('First hour raw:', data.hourly_averages[0]?.hour);
-                if (data.hourly_averages[0]) {
-                    const rawDate = new Date(data.hourly_averages[0].hour);
-                    const utcDate = new Date(data.hourly_averages[0].hour + 'Z');
+                console.log('First interval raw:', data.interval_averages[0]?.interval_time);
+                if (data.interval_averages[0]) {
+                    const rawDate = new Date(data.interval_averages[0].interval_time);
+                    const utcDate = new Date(data.interval_averages[0].interval_time + 'Z');
                     console.log('Raw date parse:', rawDate.toISOString());
                     console.log('UTC date parse:', utcDate.toISOString());
                     console.log('PST converted:', utcDate.toLocaleString('en-US', { 
@@ -380,24 +380,25 @@
                     }));
                 }
                 
-                if (data.hourly_averages && data.hourly_averages.length > 0) {
+                if (data.interval_averages && data.interval_averages.length > 0) {
                     // Use actual data only - don't fill gaps yet
                     // Prepare data for chart with PST/PDT conversion
-                    const labels = data.hourly_averages.map(item => {
+                    const labels = data.interval_averages.map(item => {
                         // Create date from UTC timestamp and convert to PST/PDT
-                        const utcDate = new Date(item.hour + 'Z'); // Ensure UTC parsing
+                        const utcDate = new Date(item.interval_time + 'Z'); // Ensure UTC parsing
                         return utcDate.toLocaleString('en-US', { 
                             month: 'short', 
                             day: 'numeric', 
                             hour: 'numeric',
+                            minute: '2-digit',
                             timeZone: 'America/Los_Angeles',
                             timeZoneName: 'short'
                         });
                     });
                     
-                    const pm25Data = data.hourly_averages.map(item => item.avg_pm2_5);
-                    const pm10Data = data.hourly_averages.map(item => item.avg_pm10);
-                    const aqiData = data.hourly_averages.map(item => item.avg_aqi);
+                    const pm25Data = data.interval_averages.map(item => item.avg_pm2_5);
+                    const pm10Data = data.interval_averages.map(item => item.avg_pm10);
+                    const aqiData = data.interval_averages.map(item => item.avg_aqi);
                     
                     console.log('Chart data arrays:', { pm25Data, pm10Data, aqiData });
                     console.log('Non-null PM2.5 values:', pm25Data.filter(v => v !== null));
@@ -438,7 +439,7 @@
                         document.getElementById('db-stats').innerHTML = statsHtml;
                     }
                 } else {
-                    console.log('No hourly averages data available');
+                    console.log('No interval averages data available');
                     // Show empty chart with message
                     airQualityChart.data.labels = ['No data available'];
                     airQualityChart.data.datasets[0].data = [];
