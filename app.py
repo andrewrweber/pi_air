@@ -10,12 +10,17 @@ import os
 import threading
 import time
 from collections import deque
+import logging
 
 app = Flask(__name__)
 
 # Enable CORS for development
 if os.environ.get('FLASK_DEBUG', 'False').lower() == 'true':
     CORS(app)  # Allow all origins in development
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Optimize for Raspberry Pi Zero 2 W - limit worker threads
 if platform.machine().startswith('arm'):
@@ -27,6 +32,11 @@ if platform.machine().startswith('arm'):
 temperature_history = deque(maxlen=120)  # 10 minutes at 5-second intervals (10*60/5 = 120)
 temperature_lock = threading.Lock()
 latest_temperature = None
+
+# Air quality sensor
+air_quality_sensor = None
+air_quality_data = None
+air_quality_lock = threading.Lock()
 
 def get_size(bytes: float, suffix: str = "B") -> str:
     """Convert bytes to human readable format"""
@@ -78,6 +88,26 @@ def sample_temperature():
 # Start temperature sampling thread
 temperature_thread = threading.Thread(target=sample_temperature, daemon=True)
 temperature_thread.start()
+
+def initialize_air_quality_sensor():
+    """Initialize PMS7003 sensor if on Raspberry Pi"""
+    global air_quality_sensor
+    if platform.system() == 'Linux' and os.path.exists('/dev/ttyS0'):
+        try:
+            from pms7003 import PMS7003
+            air_quality_sensor = PMS7003()
+            if air_quality_sensor.start():
+                logger.info("PMS7003 air quality sensor initialized")
+            else:
+                logger.warning("Failed to start PMS7003 sensor")
+                air_quality_sensor = None
+        except ImportError:
+            logger.info("PMS7003 module not available")
+        except Exception as e:
+            logger.error(f"Error initializing PMS7003: {e}")
+
+# Initialize air quality sensor
+initialize_air_quality_sensor()
 
 def get_system_info() -> Dict[str, Any]:
     """Gather system information"""
@@ -189,6 +219,18 @@ def stats_api():
         # Use stored temperature instead of real-time reading
         with temperature_lock:
             stats['cpu_temp'] = latest_temperature
+        
+        # Add air quality data if available
+        if air_quality_sensor:
+            air_data = air_quality_sensor.get_data()
+            if air_data:
+                stats['air_quality'] = {
+                    'pm1_0': air_data['pm1_0'],
+                    'pm2_5': air_data['pm2_5'],
+                    'pm10': air_data['pm10'],
+                    'aqi': air_data['aqi'],
+                    'aqi_level': air_data['aqi_level']
+                }
         
         response = jsonify(stats)
         # Add explicit CORS headers for development

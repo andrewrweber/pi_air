@@ -36,6 +36,17 @@
                 <h2>Network</h2>
                 <div id="network-info" class="info-list"></div>
             </div>
+            
+            <div class="stat-card" id="air-quality-card" style="display: none;">
+                <h2>Air Quality</h2>
+                <div class="stat-value" id="aqi-value">--</div>
+                <div class="stat-label" id="aqi-level">--</div>
+                <div class="air-quality-details">
+                    <div class="air-metric">PM1.0: <span id="pm1-value">--</span> μg/m³</div>
+                    <div class="air-metric">PM2.5: <span id="pm25-value">--</span> μg/m³</div>
+                    <div class="air-metric">PM10: <span id="pm10-value">--</span> μg/m³</div>
+                </div>
+            </div>
         </div>
         
         <div class="disk-section">
@@ -185,6 +196,33 @@
                 
                 // Update memory usage
                 document.getElementById('memory-usage').textContent = `${data.memory_percent.toFixed(1)}%`;
+                
+                // Update air quality if available
+                if (data.air_quality) {
+                    document.getElementById('air-quality-card').style.display = 'block';
+                    document.getElementById('aqi-value').textContent = data.air_quality.aqi;
+                    document.getElementById('aqi-level').textContent = data.air_quality.aqi_level;
+                    document.getElementById('pm1-value').textContent = data.air_quality.pm1_0;
+                    document.getElementById('pm25-value').textContent = data.air_quality.pm2_5;
+                    document.getElementById('pm10-value').textContent = data.air_quality.pm10;
+                    
+                    // Set AQI color based on level
+                    const aqiElement = document.getElementById('aqi-value');
+                    const aqi = data.air_quality.aqi;
+                    if (aqi <= 50) {
+                        aqiElement.style.color = '#00e400';  // Good - Green
+                    } else if (aqi <= 100) {
+                        aqiElement.style.color = '#ffff00';  // Moderate - Yellow
+                    } else if (aqi <= 150) {
+                        aqiElement.style.color = '#ff7e00';  // Unhealthy for Sensitive - Orange
+                    } else if (aqi <= 200) {
+                        aqiElement.style.color = '#ff0000';  // Unhealthy - Red
+                    } else if (aqi <= 300) {
+                        aqiElement.style.color = '#8f3f97';  // Very Unhealthy - Purple
+                    } else {
+                        aqiElement.style.color = '#7e0023';  // Hazardous - Maroon
+                    }
+                }
                 
                 // Update last update time
                 document.getElementById('last-update').textContent = 
