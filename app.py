@@ -97,19 +97,10 @@ temperature_thread.start()
 def initialize_air_quality_sensor():
     """Initialize PMS7003 sensor if on Raspberry Pi"""
     global air_quality_sensor
-    if platform.system() == 'Linux' and os.path.exists('/dev/ttyS0'):
-        try:
-            from pms7003 import PMS7003
-            air_quality_sensor = PMS7003()
-            if air_quality_sensor.start():
-                logger.info("PMS7003 air quality sensor initialized")
-            else:
-                logger.warning("Failed to start PMS7003 sensor")
-                air_quality_sensor = None
-        except ImportError:
-            logger.info("PMS7003 module not available")
-        except Exception as e:
-            logger.error(f"Error initializing PMS7003: {e}")
+    # Disabled - air quality monitoring is now handled by the separate service
+    # The web app will read data from the database instead
+    logger.info("Air quality data will be read from database (managed by air-quality-monitor service)")
+    air_quality_sensor = None
 
 # Initialize air quality sensor
 initialize_air_quality_sensor()
@@ -311,11 +302,9 @@ if __name__ == '__main__':
     logger.info(f"Starting Pi Air Quality Monitor on {host}:{port} (debug={debug_mode})")
     logger.info(f"Platform: {platform.system()} {platform.machine()}")
     
-    # Log sensor status
-    if air_quality_sensor:
-        logger.info("PMS7003 air quality sensor is active")
-    else:
-        logger.info("PMS7003 air quality sensor not available")
+    # Log data source status
+    logger.info("Air quality data source: SQLite database (air_quality.db)")
+    logger.info("Managed by: air-quality-monitor.service")
     
     if os.environ.get('LOG_LEVEL') == 'DEBUG':
         logger.debug("Debug logging enabled")
