@@ -11,7 +11,9 @@ import threading
 import time
 from collections import deque
 import logging
-from database import get_latest_reading, get_hourly_averages_24h, get_15min_averages_24h, get_database_stats
+from database import (get_latest_reading, get_hourly_averages_24h, get_15min_averages_24h, get_database_stats,
+                     insert_system_reading, get_latest_system_reading, get_system_readings_last_24h, 
+                     get_system_hourly_averages_24h, init_database)
 
 app = Flask(__name__, 
             template_folder='../templates',
@@ -77,24 +79,49 @@ def get_cpu_temperature() -> Optional[float]:
         pass
     return None
 
-def sample_temperature():
-    """Background thread to sample CPU temperature every 5 seconds"""
+def sample_temperature_and_system_stats():
+    """Background thread to sample CPU temperature and system stats every 30 seconds"""
     global latest_temperature
+    last_db_write = 0
+    db_write_interval = 30  # Write to database every 30 seconds
+    
     while True:
         try:
+            current_time = time.time()
+            
+            # Get system metrics
             temp = get_cpu_temperature()
+            cpu_usage = psutil.cpu_percent(interval=1)
+            memory_usage = psutil.virtual_memory().percent
+            disk_usage = psutil.disk_usage('/').percent
+            
             if temp is not None:
                 timestamp = datetime.datetime.now().isoformat()
                 with temperature_lock:
                     temperature_history.append((timestamp, temp))
                     latest_temperature = temp
+            
+            # Write to database every 30 seconds
+            if current_time - last_db_write >= db_write_interval:
+                try:
+                    insert_system_reading(
+                        cpu_temp=temp,
+                        cpu_usage=cpu_usage,
+                        memory_usage=memory_usage,
+                        disk_usage=disk_usage
+                    )
+                    logger.debug(f"Inserted system reading: temp={temp}, CPU={cpu_usage}%, mem={memory_usage}%")
+                    last_db_write = current_time
+                except Exception as e:
+                    logger.error(f"Error writing system reading to database: {e}")
+                    
         except Exception as e:
-            print(f"Error sampling temperature: {e}")
-        time.sleep(5)  # Sample every 5 seconds
+            logger.error(f"Error sampling system stats: {e}")
+        time.sleep(5)  # Sample every 5 seconds for real-time display
 
-# Start temperature sampling thread
-temperature_thread = threading.Thread(target=sample_temperature, daemon=True)
-temperature_thread.start()
+# Start system monitoring thread
+system_monitor_thread = threading.Thread(target=sample_temperature_and_system_stats, daemon=True)
+system_monitor_thread.start()
 
 def initialize_air_quality_sensor():
     """Initialize PMS7003 sensor if on Raspberry Pi"""
@@ -104,7 +131,8 @@ def initialize_air_quality_sensor():
     logger.info("Air quality data will be read from database (managed by air-quality-monitor service)")
     air_quality_sensor = None
 
-# Initialize air quality sensor
+# Initialize database and air quality sensor
+init_database()
 initialize_air_quality_sensor()
 
 def get_system_info() -> Dict[str, Any]:
@@ -253,22 +281,54 @@ def stats_api():
 
 @app.route('/api/temperature-history')
 def temperature_history_api():
-    """API endpoint for temperature history"""
+    """API endpoint for temperature history (both real-time and database)"""
     try:
+        # Get real-time history for immediate display
         with temperature_lock:
-            # Convert deque to list of dictionaries for JSON serialization
-            history = [
+            real_time_history = [
                 {'timestamp': ts, 'temperature': temp} 
                 for ts, temp in temperature_history
             ]
         
-        response = jsonify({'history': history})
+        # Get database history for longer term trends
+        db_history = get_system_readings_last_24h()
+        
+        response_data = {
+            'real_time_history': real_time_history,
+            'database_history': db_history
+        }
+        
+        response = jsonify(response_data)
         # Add explicit CORS headers for development
         if os.environ.get('FLASK_DEBUG', 'False').lower() == 'true':
             response.headers['Access-Control-Allow-Origin'] = '*'
         return response
     except Exception as e:
-        print(f"Error in temperature_history_api: {e}")
+        logger.error(f"Error in temperature_history_api: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/system-history')
+def system_history_api():
+    """API endpoint for system metrics history"""
+    try:
+        # Get hourly averages for the chart
+        hourly_data = get_system_hourly_averages_24h()
+        
+        # Get latest system reading
+        latest_reading = get_latest_system_reading()
+        
+        response_data = {
+            'hourly_averages': hourly_data,
+            'latest_reading': latest_reading
+        }
+        
+        response = jsonify(response_data)
+        # Add explicit CORS headers for development
+        if os.environ.get('FLASK_DEBUG', 'False').lower() == 'true':
+            response.headers['Access-Control-Allow-Origin'] = '*'
+        return response
+    except Exception as e:
+        logger.error(f"Error in system_history_api: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/air-quality-history')
@@ -305,8 +365,9 @@ if __name__ == '__main__':
     logger.info(f"Platform: {platform.system()} {platform.machine()}")
     
     # Log data source status
-    logger.info("Air quality data source: SQLite database (air_quality.db)")
-    logger.info("Managed by: air-quality-monitor.service")
+    logger.info("Data sources: SQLite database (monitoring.db)")
+    logger.info("Air quality data managed by: air-quality-monitor.service")
+    logger.info("System metrics managed by: Flask app background thread")
     
     if os.environ.get('LOG_LEVEL') == 'DEBUG':
         logger.debug("Debug logging enabled")
