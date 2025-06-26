@@ -10,12 +10,22 @@ import os
 import threading
 import time
 from collections import deque
+import logging
+from database import get_latest_reading, get_hourly_averages_24h, get_15min_averages_24h, get_database_stats
 
 app = Flask(__name__)
 
 # Enable CORS for development
 if os.environ.get('FLASK_DEBUG', 'False').lower() == 'true':
     CORS(app)  # Allow all origins in development
+
+# Configure logging
+from logging_config import setup_logging
+logger = setup_logging(
+    log_level=os.environ.get('LOG_LEVEL', 'INFO'),
+    log_file=os.environ.get('LOG_FILE', None)
+)
+logger = logging.getLogger(__name__)
 
 # Optimize for Raspberry Pi Zero 2 W - limit worker threads
 if platform.machine().startswith('arm'):
@@ -27,6 +37,11 @@ if platform.machine().startswith('arm'):
 temperature_history = deque(maxlen=120)  # 10 minutes at 5-second intervals (10*60/5 = 120)
 temperature_lock = threading.Lock()
 latest_temperature = None
+
+# Air quality sensor
+air_quality_sensor = None
+air_quality_data = None
+air_quality_lock = threading.Lock()
 
 def get_size(bytes: float, suffix: str = "B") -> str:
     """Convert bytes to human readable format"""
@@ -78,6 +93,17 @@ def sample_temperature():
 # Start temperature sampling thread
 temperature_thread = threading.Thread(target=sample_temperature, daemon=True)
 temperature_thread.start()
+
+def initialize_air_quality_sensor():
+    """Initialize PMS7003 sensor if on Raspberry Pi"""
+    global air_quality_sensor
+    # Disabled - air quality monitoring is now handled by the separate service
+    # The web app will read data from the database instead
+    logger.info("Air quality data will be read from database (managed by air-quality-monitor service)")
+    air_quality_sensor = None
+
+# Initialize air quality sensor
+initialize_air_quality_sensor()
 
 def get_system_info() -> Dict[str, Any]:
     """Gather system information"""
@@ -190,6 +216,30 @@ def stats_api():
         with temperature_lock:
             stats['cpu_temp'] = latest_temperature
         
+        # Add air quality data from database (preferred) or direct sensor
+        air_data = get_latest_reading()
+        if air_data:
+            stats['air_quality'] = {
+                'pm1_0': air_data['pm1_0'],
+                'pm2_5': air_data['pm2_5'],
+                'pm10': air_data['pm10'],
+                'aqi': air_data['aqi'],
+                'aqi_level': air_data['aqi_level'],
+                'source': 'database'
+            }
+        elif air_quality_sensor:
+            # Fallback to direct sensor reading if no database data
+            sensor_data = air_quality_sensor.get_data()
+            if sensor_data:
+                stats['air_quality'] = {
+                    'pm1_0': sensor_data['pm1_0'],
+                    'pm2_5': sensor_data['pm2_5'],
+                    'pm10': sensor_data['pm10'],
+                    'aqi': sensor_data['aqi'],
+                    'aqi_level': sensor_data['aqi_level'],
+                    'source': 'sensor'
+                }
+        
         response = jsonify(stats)
         # Add explicit CORS headers for development
         if os.environ.get('FLASK_DEBUG', 'False').lower() == 'true':
@@ -219,11 +269,45 @@ def temperature_history_api():
         print(f"Error in temperature_history_api: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/air-quality-history')
+def air_quality_history_api():
+    """API endpoint for 24-hour air quality history"""
+    try:
+        # Get 15-minute averages for the chart
+        interval_data = get_15min_averages_24h()
+        
+        # Get database stats
+        db_stats = get_database_stats()
+        
+        response_data = {
+            'interval_averages': interval_data,
+            'stats': db_stats
+        }
+        
+        response = jsonify(response_data)
+        # Add explicit CORS headers for development
+        if os.environ.get('FLASK_DEBUG', 'False').lower() == 'true':
+            response.headers['Access-Control-Allow-Origin'] = '*'
+        return response
+    except Exception as e:
+        logger.error(f"Error in air_quality_history_api: {e}")
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     # Configuration should be environment-based
     debug_mode = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
     host = os.environ.get('FLASK_HOST', '127.0.0.1')  # Default to localhost for security
     port = int(os.environ.get('FLASK_PORT', '5000'))
+    
+    logger.info(f"Starting Pi Air Quality Monitor on {host}:{port} (debug={debug_mode})")
+    logger.info(f"Platform: {platform.system()} {platform.machine()}")
+    
+    # Log data source status
+    logger.info("Air quality data source: SQLite database (air_quality.db)")
+    logger.info("Managed by: air-quality-monitor.service")
+    
+    if os.environ.get('LOG_LEVEL') == 'DEBUG':
+        logger.debug("Debug logging enabled")
     
     print(f"Starting server on {host}:{port} (debug={debug_mode})")
     print("To allow network access, set FLASK_HOST=0.0.0.0")
