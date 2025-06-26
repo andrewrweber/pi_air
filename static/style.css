@@ -163,6 +163,25 @@ h1 {
     font-weight: 600;
 }
 
+.air-quality-section {
+    margin-top: 20px;
+    padding: 20px;
+    background-color: #f7fafc;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.db-stats {
+    margin-top: 10px;
+    text-align: center;
+    font-size: 0.9em;
+    color: #718096;
+}
+
+.db-stat-item {
+    margin: 5px 0;
+}
+
 @media (max-width: 768px) {
     .container {
         padding: 10px;

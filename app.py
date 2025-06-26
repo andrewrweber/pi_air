@@ -11,6 +11,7 @@ import threading
 import time
 from collections import deque
 import logging
+from database import get_latest_reading, get_hourly_averages_24h, get_database_stats
 
 app = Flask(__name__)
 
@@ -224,16 +225,28 @@ def stats_api():
         with temperature_lock:
             stats['cpu_temp'] = latest_temperature
         
-        # Add air quality data if available
-        if air_quality_sensor:
-            air_data = air_quality_sensor.get_data()
-            if air_data:
+        # Add air quality data from database (preferred) or direct sensor
+        air_data = get_latest_reading()
+        if air_data:
+            stats['air_quality'] = {
+                'pm1_0': air_data['pm1_0'],
+                'pm2_5': air_data['pm2_5'],
+                'pm10': air_data['pm10'],
+                'aqi': air_data['aqi'],
+                'aqi_level': air_data['aqi_level'],
+                'source': 'database'
+            }
+        elif air_quality_sensor:
+            # Fallback to direct sensor reading if no database data
+            sensor_data = air_quality_sensor.get_data()
+            if sensor_data:
                 stats['air_quality'] = {
-                    'pm1_0': air_data['pm1_0'],
-                    'pm2_5': air_data['pm2_5'],
-                    'pm10': air_data['pm10'],
-                    'aqi': air_data['aqi'],
-                    'aqi_level': air_data['aqi_level']
+                    'pm1_0': sensor_data['pm1_0'],
+                    'pm2_5': sensor_data['pm2_5'],
+                    'pm10': sensor_data['pm10'],
+                    'aqi': sensor_data['aqi'],
+                    'aqi_level': sensor_data['aqi_level'],
+                    'source': 'sensor'
                 }
         
         response = jsonify(stats)
@@ -263,6 +276,30 @@ def temperature_history_api():
         return response
     except Exception as e:
         print(f"Error in temperature_history_api: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/air-quality-history')
+def air_quality_history_api():
+    """API endpoint for 24-hour air quality history"""
+    try:
+        # Get hourly averages for the chart
+        hourly_data = get_hourly_averages_24h()
+        
+        # Get database stats
+        db_stats = get_database_stats()
+        
+        response_data = {
+            'hourly_averages': hourly_data,
+            'stats': db_stats
+        }
+        
+        response = jsonify(response_data)
+        # Add explicit CORS headers for development
+        if os.environ.get('FLASK_DEBUG', 'False').lower() == 'true':
+            response.headers['Access-Control-Allow-Origin'] = '*'
+        return response
+    except Exception as e:
+        logger.error(f"Error in air_quality_history_api: {e}")
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':

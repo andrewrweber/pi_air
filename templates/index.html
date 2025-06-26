@@ -61,6 +61,14 @@
             </div>
         </div>
         
+        <div class="air-quality-section" id="air-quality-history-section" style="display: none;">
+            <h2>Air Quality History (24 hours)</h2>
+            <div style="position: relative; height:400px; width:100%;">
+                <canvas id="airQualityChart"></canvas>
+            </div>
+            <div class="db-stats" id="db-stats"></div>
+        </div>
+        
         <div class="footer">
             <p>Last updated: <span id="last-update">Never</span></p>
         </div>
@@ -68,8 +76,8 @@
     
     <script>
         // Initialize temperature chart
-        const ctx = document.getElementById('temperatureChart').getContext('2d');
-        const temperatureChart = new Chart(ctx, {
+        const tempCtx = document.getElementById('temperatureChart').getContext('2d');
+        const temperatureChart = new Chart(tempCtx, {
             type: 'line',
             data: {
                 labels: [],
@@ -103,6 +111,87 @@
                 plugins: {
                     legend: {
                         display: false
+                    }
+                }
+            }
+        });
+        
+        // Initialize air quality chart
+        const aqCtx = document.getElementById('airQualityChart').getContext('2d');
+        const airQualityChart = new Chart(aqCtx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [
+                    {
+                        label: 'PM2.5 (μg/m³)',
+                        data: [],
+                        borderColor: 'rgb(255, 99, 132)',
+                        backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                        tension: 0.1,
+                        yAxisID: 'y-pm'
+                    },
+                    {
+                        label: 'PM10 (μg/m³)',
+                        data: [],
+                        borderColor: 'rgb(54, 162, 235)',
+                        backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                        tension: 0.1,
+                        yAxisID: 'y-pm'
+                    },
+                    {
+                        label: 'AQI',
+                        data: [],
+                        borderColor: 'rgb(75, 192, 192)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                        tension: 0.1,
+                        yAxisID: 'y-aqi'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Time'
+                        }
+                    },
+                    'y-pm': {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: {
+                            display: true,
+                            text: 'Particulate Matter (μg/m³)'
+                        },
+                        suggestedMin: 0
+                    },
+                    'y-aqi': {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        title: {
+                            display: true,
+                            text: 'Air Quality Index'
+                        },
+                        suggestedMin: 0,
+                        suggestedMax: 200,
+                        grid: {
+                            drawOnChartArea: false
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
                     }
                 }
             }
@@ -233,16 +322,68 @@
             }
         }
         
+        // Function to fetch and update air quality history
+        async function fetchAirQualityHistory() {
+            try {
+                const response = await fetch('/api/air-quality-history');
+                const data = await response.json();
+                
+                if (data.hourly_averages && data.hourly_averages.length > 0) {
+                    // Show the section
+                    document.getElementById('air-quality-history-section').style.display = 'block';
+                    
+                    // Prepare data for chart
+                    const labels = data.hourly_averages.map(item => {
+                        const date = new Date(item.hour);
+                        return date.toLocaleString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric', 
+                            hour: 'numeric' 
+                        });
+                    });
+                    
+                    const pm25Data = data.hourly_averages.map(item => item.avg_pm2_5);
+                    const pm10Data = data.hourly_averages.map(item => item.avg_pm10);
+                    const aqiData = data.hourly_averages.map(item => item.avg_aqi);
+                    
+                    // Update chart
+                    airQualityChart.data.labels = labels;
+                    airQualityChart.data.datasets[0].data = pm25Data;
+                    airQualityChart.data.datasets[1].data = pm10Data;
+                    airQualityChart.data.datasets[2].data = aqiData;
+                    airQualityChart.update();
+                    
+                    // Update database stats
+                    if (data.stats) {
+                        const statsHtml = `
+                            <p class="db-stat-item">
+                                Total readings: ${data.stats.total_readings} | 
+                                Database size: ${data.stats.db_size_kb} KB
+                            </p>
+                        `;
+                        document.getElementById('db-stats').innerHTML = statsHtml;
+                    }
+                }
+                
+            } catch (error) {
+                console.error('Error fetching air quality history:', error);
+            }
+        }
+        
         // Initial load
         fetchSystemInfo();
         fetchStats();
         fetchTemperatureHistory();
+        fetchAirQualityHistory();
         
         // Update stats every 5 seconds (reduced frequency for Pi Zero 2 W)
         setInterval(fetchStats, 5000);
         
         // Update temperature history every 5 seconds to match sampling rate
         setInterval(fetchTemperatureHistory, 5000);
+        
+        // Update air quality history every 30 seconds
+        setInterval(fetchAirQualityHistory, 30000);
         
         // Update full system info every 60 seconds (reduced frequency for Pi Zero 2 W)
         setInterval(fetchSystemInfo, 60000);
