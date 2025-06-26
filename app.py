@@ -19,7 +19,11 @@ if os.environ.get('FLASK_DEBUG', 'False').lower() == 'true':
     CORS(app)  # Allow all origins in development
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+from logging_config import setup_logging
+logger = setup_logging(
+    log_level=os.environ.get('LOG_LEVEL', 'INFO'),
+    log_file=os.environ.get('LOG_FILE', None)
+)
 logger = logging.getLogger(__name__)
 
 # Optimize for Raspberry Pi Zero 2 W - limit worker threads
@@ -266,6 +270,18 @@ if __name__ == '__main__':
     debug_mode = os.environ.get('FLASK_DEBUG', 'False').lower() == 'true'
     host = os.environ.get('FLASK_HOST', '127.0.0.1')  # Default to localhost for security
     port = int(os.environ.get('FLASK_PORT', '5000'))
+    
+    logger.info(f"Starting Pi Air Quality Monitor on {host}:{port} (debug={debug_mode})")
+    logger.info(f"Platform: {platform.system()} {platform.machine()}")
+    
+    # Log sensor status
+    if air_quality_sensor:
+        logger.info("PMS7003 air quality sensor is active")
+    else:
+        logger.info("PMS7003 air quality sensor not available")
+    
+    if os.environ.get('LOG_LEVEL') == 'DEBUG':
+        logger.debug("Debug logging enabled")
     
     print(f"Starting server on {host}:{port} (debug={debug_mode})")
     print("To allow network access, set FLASK_HOST=0.0.0.0")

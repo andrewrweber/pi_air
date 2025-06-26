@@ -8,6 +8,7 @@ import struct
 import threading
 import time
 import logging
+import traceback
 
 logger = logging.getLogger(__name__)
 
@@ -67,16 +68,31 @@ class PMS7003:
             
     def _read_loop(self):
         """Continuous reading loop"""
+        logger.info("Starting PMS7003 reading loop")
+        frame_count = 0
+        error_count = 0
+        
         while self.running:
             try:
                 frame = self._read_frame()
                 if frame:
+                    frame_count += 1
                     data = self._parse_data(frame)
                     with self.lock:
                         self.latest_data = data
                         self.last_update = time.time()
+                    
+                    # Log every 10th frame to avoid spam
+                    if frame_count % 10 == 0:
+                        logger.info(f"PMS7003 readings - PM2.5: {data['pm2_5']} μg/m³, " +
+                                  f"PM10: {data['pm10']} μg/m³, Frames: {frame_count}")
+                else:
+                    logger.debug("No frame received from PMS7003")
+                    
             except Exception as e:
-                logger.error(f"Error reading PMS7003: {e}")
+                error_count += 1
+                logger.error(f"Error reading PMS7003 (#{error_count}): {e}")
+                logger.debug(f"Traceback: {traceback.format_exc()}")
                 time.sleep(1)
     
     def _read_frame(self):
@@ -84,19 +100,35 @@ class PMS7003:
         # Clear buffer
         self.serial.reset_input_buffer()
         
+        start_time = time.time()
+        bytes_read = 0
+        
         # Look for start bytes
         while self.running:
             b = self.serial.read(1)
-            if not b or b[0] != self.START_BYTE_1:
+            bytes_read += 1
+            
+            if not b:
+                if time.time() - start_time > self.timeout:
+                    logger.warning(f"Timeout reading frame after {bytes_read} bytes")
+                    return None
+                continue
+                
+            if b[0] != self.START_BYTE_1:
                 continue
                 
             b = self.serial.read(1)
+            bytes_read += 1
+            
             if not b or b[0] != self.START_BYTE_2:
                 continue
+            
+            logger.debug(f"Found start sequence after {bytes_read} bytes")
             
             # Read rest of frame
             frame = self.serial.read(self.FRAME_LENGTH - 2)
             if len(frame) != self.FRAME_LENGTH - 2:
+                logger.warning(f"Incomplete frame: expected {self.FRAME_LENGTH - 2} bytes, got {len(frame)}")
                 continue
             
             # Combine all bytes
@@ -107,7 +139,10 @@ class PMS7003:
             calculated_checksum = sum(data[:-2])
             
             if checksum == calculated_checksum:
+                logger.debug(f"Valid frame received, total bytes read: {bytes_read + len(frame)}")
                 return data
+            else:
+                logger.warning(f"Checksum mismatch: expected {checksum}, calculated {calculated_checksum}")
                 
         return None
     
@@ -133,12 +168,21 @@ class PMS7003:
             if self.latest_data and self.last_update:
                 # Add air quality index calculation
                 aqi = self._calculate_aqi(self.latest_data['pm2_5'])
-                return {
+                data = {
                     **self.latest_data,
                     'aqi': aqi,
                     'aqi_level': self._get_aqi_level(aqi),
                     'last_update': self.last_update
                 }
+                
+                # Log data age
+                data_age = time.time() - self.last_update
+                if data_age > 10:
+                    logger.warning(f"PMS7003 data is {data_age:.1f}s old")
+                    
+                return data
+            else:
+                logger.debug("No PMS7003 data available yet")
         return None
     
     def _calculate_aqi(self, pm25):
