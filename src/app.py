@@ -13,7 +13,9 @@ from collections import deque
 import logging
 from database import get_latest_reading, get_hourly_averages_24h, get_15min_averages_24h, get_database_stats
 
-app = Flask(__name__)
+app = Flask(__name__, 
+            template_folder='../templates',
+            static_folder='../static')
 
 # Enable CORS for development
 if os.environ.get('FLASK_DEBUG', 'False').lower() == 'true':

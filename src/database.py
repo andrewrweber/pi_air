@@ -8,10 +8,14 @@ import datetime
 import logging
 from contextlib import contextmanager
 from typing import List, Dict, Optional, Tuple
+import os
 
 logger = logging.getLogger(__name__)
 
-DB_PATH = "air_quality.db"
+# Use environment variable or default to data directory relative to project root
+DB_PATH = os.environ.get('AIR_QUALITY_DB_PATH', 
+                        os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 
+                                    'data', 'air_quality.db'))
 
 @contextmanager
 def get_db_connection():
@@ -25,6 +29,12 @@ def get_db_connection():
 
 def init_database():
     """Initialize the database schema"""
+    # Ensure the data directory exists
+    db_dir = os.path.dirname(DB_PATH)
+    if db_dir and not os.path.exists(db_dir):
+        os.makedirs(db_dir, exist_ok=True)
+        logger.info(f"Created database directory: {db_dir}")
+    
     with get_db_connection() as conn:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS air_quality_readings (
