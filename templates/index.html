@@ -368,13 +368,25 @@
                 const data = await response.json();
                 
                 console.log('Air quality data received:', data);
+                console.log('First hour raw:', data.hourly_averages[0]?.hour);
+                if (data.hourly_averages[0]) {
+                    const rawDate = new Date(data.hourly_averages[0].hour);
+                    const utcDate = new Date(data.hourly_averages[0].hour + 'Z');
+                    console.log('Raw date parse:', rawDate.toISOString());
+                    console.log('UTC date parse:', utcDate.toISOString());
+                    console.log('PST converted:', utcDate.toLocaleString('en-US', { 
+                        timeZone: 'America/Los_Angeles',
+                        timeZoneName: 'short'
+                    }));
+                }
                 
                 if (data.hourly_averages && data.hourly_averages.length > 0) {
                     // Use actual data only - don't fill gaps yet
-                    // Prepare data for chart
+                    // Prepare data for chart with PST/PDT conversion
                     const labels = data.hourly_averages.map(item => {
-                        const date = new Date(item.hour);
-                        return date.toLocaleString('en-US', { 
+                        // Create date from UTC timestamp and convert to PST/PDT
+                        const utcDate = new Date(item.hour + 'Z'); // Ensure UTC parsing
+                        return utcDate.toLocaleString('en-US', { 
                             month: 'short', 
                             day: 'numeric', 
                             hour: 'numeric',
