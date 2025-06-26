@@ -47,3 +47,4 @@ Thumbs.db
 # Project specific
 *.log
 *.pid
+debugging_screenshots/

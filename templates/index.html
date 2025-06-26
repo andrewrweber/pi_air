@@ -159,7 +159,8 @@
                         borderColor: 'rgb(255, 99, 132)',
                         backgroundColor: 'rgba(255, 99, 132, 0.1)',
                         tension: 0.1,
-                        yAxisID: 'y-pm'
+                        yAxisID: 'y-pm',
+                        spanGaps: true
                     },
                     {
                         label: 'PM10 (μg/m³)',
@@ -167,7 +168,8 @@
                         borderColor: 'rgb(54, 162, 235)',
                         backgroundColor: 'rgba(54, 162, 235, 0.1)',
                         tension: 0.1,
-                        yAxisID: 'y-pm'
+                        yAxisID: 'y-pm',
+                        spanGaps: true
                     },
                     {
                         label: 'AQI',
@@ -175,7 +177,8 @@
                         borderColor: 'rgb(75, 192, 192)',
                         backgroundColor: 'rgba(75, 192, 192, 0.1)',
                         tension: 0.1,
-                        yAxisID: 'y-aqi'
+                        yAxisID: 'y-aqi',
+                        spanGaps: true
                     }
                 ]
             },
@@ -201,7 +204,11 @@
                             display: true,
                             text: 'Particulate Matter (μg/m³)'
                         },
-                        suggestedMin: 0
+                        min: 0,
+                        suggestedMax: 50,
+                        ticks: {
+                            beginAtZero: true
+                        }
                     },
                     'y-aqi': {
                         type: 'linear',
@@ -211,10 +218,13 @@
                             display: true,
                             text: 'Air Quality Index'
                         },
-                        suggestedMin: 0,
-                        suggestedMax: 200,
+                        min: 0,
+                        suggestedMax: 100,
                         grid: {
                             drawOnChartArea: false
+                        },
+                        ticks: {
+                            beginAtZero: true
                         }
                     }
                 },
@@ -358,9 +368,37 @@
                 const data = await response.json();
                 
                 if (data.hourly_averages && data.hourly_averages.length > 0) {
+                    // Fill in missing hours for the last 24 hours
+                    const now = new Date();
+                    const fullData = [];
+                    
+                    // Create map of existing data
+                    const dataMap = {};
+                    data.hourly_averages.forEach(item => {
+                        dataMap[item.hour] = item;
+                    });
+                    
+                    // Generate all hours for the last 24 hours
+                    for (let i = 23; i >= 0; i--) {
+                        const hour = new Date(now);
+                        hour.setHours(hour.getHours() - i);
+                        hour.setMinutes(0, 0, 0);
+                        const hourStr = hour.toISOString().slice(0, 13) + ':00:00';
+                        
+                        if (dataMap[hourStr]) {
+                            fullData.push(dataMap[hourStr]);
+                        } else {
+                            fullData.push({
+                                hour: hourStr,
+                                avg_pm2_5: null,
+                                avg_pm10: null,
+                                avg_aqi: null
+                            });
+                        }
+                    }
                     
                     // Prepare data for chart
-                    const labels = data.hourly_averages.map(item => {
+                    const labels = fullData.map(item => {
                         const date = new Date(item.hour);
                         return date.toLocaleString('en-US', { 
                             month: 'short', 
@@ -369,15 +407,33 @@
                         });
                     });
                     
-                    const pm25Data = data.hourly_averages.map(item => item.avg_pm2_5);
-                    const pm10Data = data.hourly_averages.map(item => item.avg_pm10);
-                    const aqiData = data.hourly_averages.map(item => item.avg_aqi);
+                    const pm25Data = fullData.map(item => item.avg_pm2_5);
+                    const pm10Data = fullData.map(item => item.avg_pm10);
+                    const aqiData = fullData.map(item => item.avg_aqi);
                     
-                    // Update chart
+                    // Calculate dynamic max values for better scaling
+                    const maxPM = Math.max(
+                        ...pm25Data.filter(v => v !== null),
+                        ...pm10Data.filter(v => v !== null),
+                        10  // minimum
+                    );
+                    const maxAQI = Math.max(...aqiData.filter(v => v !== null), 50);
+                    
+                    // Update chart scales
+                    airQualityChart.options.scales['y-pm'].suggestedMax = Math.ceil(maxPM * 1.2);
+                    airQualityChart.options.scales['y-aqi'].suggestedMax = Math.ceil(maxAQI * 1.2);
+                    
+                    // Update chart data
                     airQualityChart.data.labels = labels;
                     airQualityChart.data.datasets[0].data = pm25Data;
                     airQualityChart.data.datasets[1].data = pm10Data;
                     airQualityChart.data.datasets[2].data = aqiData;
+                    
+                    // Set spanGaps to connect points across null values
+                    airQualityChart.data.datasets.forEach(dataset => {
+                        dataset.spanGaps = true;
+                    });
+                    
                     airQualityChart.update();
                     
                     // Update database stats
