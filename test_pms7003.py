@@ -16,7 +16,7 @@ class PMS7003:
     START_BYTE_2 = 0x4d
     FRAME_LENGTH = 32
     
-    def __init__(self, port='/dev/serial0', baudrate=9600, timeout=2):
+    def __init__(self, port='/dev/ttyS0', baudrate=9600, timeout=2):
         """Initialize sensor connection"""
         try:
             self.serial = serial.Serial(
