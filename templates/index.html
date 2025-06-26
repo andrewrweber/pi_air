@@ -377,7 +377,9 @@
                         return date.toLocaleString('en-US', { 
                             month: 'short', 
                             day: 'numeric', 
-                            hour: 'numeric' 
+                            hour: 'numeric',
+                            timeZone: 'America/Los_Angeles',
+                            timeZoneName: 'short'
                         });
                     });
                     
