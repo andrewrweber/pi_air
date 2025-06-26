@@ -10,7 +10,15 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 # Update service file with current user and paths
-CURRENT_USER=$(logname)
+# Use SUDO_USER if available, otherwise fall back to logname or current user
+if [ -n "$SUDO_USER" ]; then
+    CURRENT_USER=$SUDO_USER
+elif command -v logname >/dev/null 2>&1; then
+    CURRENT_USER=$(logname)
+else
+    CURRENT_USER=$(whoami)
+fi
+
 CURRENT_DIR=$(pwd)
 
 # Create service file from template

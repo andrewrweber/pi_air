@@ -179,10 +179,19 @@ class AirQualityMonitor:
 
 def main():
     """Main entry point"""
-    # Set up logging
+    # Set up logging - try /var/log first, fall back to local directory
+    log_file = None
+    try:
+        # Try to create log in /var/log
+        with open('/var/log/air_quality_monitor.log', 'a'):
+            log_file = '/var/log/air_quality_monitor.log'
+    except (IOError, OSError):
+        # Fall back to local directory
+        log_file = 'air_quality_monitor.log'
+    
     logger = setup_logging(
         log_level='INFO',
-        log_file='/var/log/air_quality_monitor.log'
+        log_file=log_file
     )
     
     # Create and start monitor

@@ -17,12 +17,9 @@ RestartSec=10
 StandardOutput=journal
 StandardError=journal
 
-# Security hardening
+# Reduced security hardening for compatibility
 NoNewPrivileges=true
 PrivateTmp=true
-ProtectSystem=strict
-ProtectHome=true
-ReadWritePaths=/home/pi/pi_air /var/log
 
 [Install]
 WantedBy=multi-user.target
