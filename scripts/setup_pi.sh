@@ -13,13 +13,13 @@ echo "Installing Python and system dependencies..."
 sudo apt-get install -y python3 python3-pip python3-venv git
 
 # Clone or update repository (if using git)
-if [ -d "/home/pi/pi_air" ]; then
+if [ -d "/home/weber/pi_air" ]; then
     echo "Updating existing installation..."
-    cd /home/pi/pi_air
+    cd /home/weber/pi_air
     git pull
 else
     echo "Cloning repository..."
-    cd /home/pi
+    cd /home/weber
     # Replace with your actual repository URL
     git clone https://github.com/andrewrweber/pi_air.git
     cd pi_air
@@ -37,7 +37,7 @@ pip install -r requirements.txt
 
 # Copy systemd service file
 echo "Installing systemd service..."
-sudo cp pimonitor.service /etc/systemd/system/
+sudo cp services/pimonitor.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable pimonitor.service
 

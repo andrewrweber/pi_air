@@ -7,9 +7,9 @@ Wants=network-online.target
 Type=simple
 User=pi
 Group=pi
-WorkingDirectory=/home/pi/pi_air
+WorkingDirectory=/home/weber/pi_air
 Environment="PYTHONUNBUFFERED=1"
-ExecStart=/usr/bin/python3 /home/pi/pi_air/air_quality_monitor.py
+ExecStart=/usr/bin/python3 /home/weber/pi_air/src/air_quality_monitor.py
 Restart=always
 RestartSec=10
 

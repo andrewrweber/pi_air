@@ -25,13 +25,13 @@ pip install -r requirements.txt
 ### Running the Application
 ```bash
 # Development mode (debug disabled by default for security)
-python app.py
+python src/app.py
 
 # With environment variables for production
-FLASK_HOST=0.0.0.0 FLASK_PORT=5000 python app.py
+FLASK_HOST=0.0.0.0 FLASK_PORT=5000 python src/app.py
 
 # Enable debug mode (development only)
-FLASK_DEBUG=true python app.py
+FLASK_DEBUG=true python src/app.py
 
 # The server runs on http://127.0.0.1:5000 by default (localhost only)
 ```
@@ -54,7 +54,7 @@ sudo systemctl restart pimonitor.service
 
 ### Core Components
 
-1. **Flask Application (app.py:1-119)**
+1. **Flask Application (src/app.py)**
    - Main entry point with three routes:
      - `/` - Serves the web dashboard
      - `/api/system` - Returns complete system information as JSON
@@ -76,7 +76,7 @@ sudo systemctl restart pimonitor.service
 ### Raspberry Pi Specific Features
 
 The application includes Raspberry Pi specific functionality:
-- CPU temperature monitoring using `vcgencmd measure_temp` (app.py:42-46, 109-113)
+- CPU temperature monitoring using `vcgencmd measure_temp` in src/app.py
 - Graceful fallback when vcgencmd is not available (shows "N/A")
 
 ### Data Flow
