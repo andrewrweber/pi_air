@@ -35,12 +35,21 @@ mkdir templates static
 ```
 
 3. Copy all the provided files into their respective locations:
-   - `app.py` in the root directory
-   - `index.html` in the `templates/` directory
-   - `style.css` in the `static/` directory
-   - `requirements.txt` in the root directory
-   - `.gitignore` in the root directory
-   - This `README.md` in the root directory
+   - `src/app.py` - Main Flask application
+   - `src/air_quality_monitor.py` - Air quality sensor monitoring service
+   - `src/pms7003.py` - PMS7003 sensor driver
+   - `src/database.py` - SQLite database interface
+   - `src/logging_config.py` - Logging configuration
+   - `templates/index.html` - Web dashboard template
+   - `static/style.css` - Dashboard styling
+   - `services/pimonitor.service` - Systemd service for web app
+   - `services/air-quality-monitor.service` - Systemd service for sensor
+   - `scripts/setup_pi.sh` - Raspberry Pi setup script
+   - `scripts/install_service.sh` - Service installation script
+   - `tests/test_pms_simple.py` - Simple sensor test
+   - `requirements.txt` - Python dependencies
+   - `.gitignore` - Git ignore rules
+   - This `README.md` - Project documentation
 
 4. Create a GitHub repository and push your code:
 ```bash
@@ -76,7 +85,7 @@ pip install -r requirements.txt
 
 5. Run the server:
 ```bash
-python app.py
+python src/app.py
 ```
 
 6. Access the web interface:
@@ -103,7 +112,7 @@ Type=simple
 User=pi
 WorkingDirectory=/home/pi/YOUR_REPO_NAME
 Environment=PATH=/home/pi/YOUR_REPO_NAME/venv/bin
-ExecStart=/home/pi/YOUR_REPO_NAME/venv/bin/python app.py
+ExecStart=/home/pi/YOUR_REPO_NAME/venv/bin/python src/app.py
 Restart=always
 
 [Install]
@@ -124,7 +133,7 @@ sudo systemctl start pimonitor.service
 
 ## Customization
 
-- Modify `app.py` to add more system metrics
+- Modify `src/app.py` to add more system metrics
 - Edit `templates/index.html` to change the layout
 - Update `static/style.css` to customize the appearance
 - Add new API endpoints for specific monitoring needs

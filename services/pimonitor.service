@@ -9,7 +9,7 @@ WorkingDirectory=/home/pi/pi_air
 Environment="PATH=/home/pi/pi_air/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 Environment="FLASK_HOST=0.0.0.0"
 Environment="FLASK_PORT=5000"
-ExecStart=/home/pi/pi_air/venv/bin/python3 /home/pi/pi_air/app.py
+ExecStart=/home/pi/pi_air/venv/bin/python3 /home/pi/pi_air/src/app.py
 Restart=always
 RestartSec=10
 

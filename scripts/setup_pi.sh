@@ -37,7 +37,7 @@ pip install -r requirements.txt
 
 # Copy systemd service file
 echo "Installing systemd service..."
-sudo cp pimonitor.service /etc/systemd/system/
+sudo cp services/pimonitor.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable pimonitor.service
 

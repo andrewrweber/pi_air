@@ -48,3 +48,8 @@ Thumbs.db
 *.log
 *.pid
 debugging_screenshots/
+
+# Database
+data/
+*.db
+air_quality.db

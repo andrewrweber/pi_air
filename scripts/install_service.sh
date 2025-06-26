@@ -22,10 +22,12 @@ fi
 CURRENT_DIR=$(pwd)
 
 # Create service file from template
+# Navigate to parent directory to find the services folder
+PARENT_DIR=$(dirname "$CURRENT_DIR")
 sed -e "s|User=pi|User=$CURRENT_USER|g" \
     -e "s|Group=pi|Group=$CURRENT_USER|g" \
-    -e "s|/home/pi/pi_air|$CURRENT_DIR|g" \
-    air-quality-monitor.service > /tmp/air-quality-monitor.service
+    -e "s|/home/pi/pi_air|$PARENT_DIR|g" \
+    $PARENT_DIR/services/air-quality-monitor.service > /tmp/air-quality-monitor.service
 
 # Copy service file
 cp /tmp/air-quality-monitor.service /etc/systemd/system/
