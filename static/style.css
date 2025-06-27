@@ -377,11 +377,15 @@ h1 {
     
     /* Enhanced chart controls for mobile - horizontal compact layout */
     .chart-controls {
+        display: flex !important;
+        flex-direction: row !important;
         margin-top: 15px;
         margin-bottom: 15px;
         gap: 6px;
         padding: 0 5px;
         justify-content: center;
+        align-items: center;
+        flex-wrap: wrap;
     }
     
     .chart-btn {
@@ -533,8 +537,10 @@ h1 {
 
 @media (max-width: 768px) {
     .chart-controls {
-        flex-direction: column;
+        flex-direction: row !important;
         align-items: center;
+        justify-content: center;
+        flex-wrap: wrap;
     }
     
     .metrics-controls {
