@@ -90,12 +90,17 @@
                 </div>
                 
                 <div class="air-quality-section" id="air-quality-history-section">
-                    <h2>Particle Concentrations (24 hours, 15-minute intervals)</h2>
+                    <h2 id="particles-chart-title">Particle Concentrations (24 hours, 15-minute intervals)</h2>
                     <div style="position: relative; height:350px; width:100%;">
                         <canvas id="particlesChart"></canvas>
                     </div>
+                    <div class="chart-controls">
+                        <button id="aq-1h-btn" class="chart-btn" onclick="showAirQualityData('1h')">1 Hour</button>
+                        <button id="aq-6h-btn" class="chart-btn" onclick="showAirQualityData('6h')">6 Hours</button>
+                        <button id="aq-24h-btn" class="chart-btn active" onclick="showAirQualityData('24h')">24 Hours</button>
+                    </div>
                     
-                    <h2 style="margin-top: 2rem;">Air Quality Index (24 hours, 15-minute intervals)</h2>
+                    <h2 style="margin-top: 2rem;" id="aqi-chart-title">Air Quality Index (24 hours, 15-minute intervals)</h2>
                     <div style="position: relative; height:300px; width:100%;">
                         <canvas id="aqiChart"></canvas>
                     </div>
@@ -422,6 +427,9 @@
         // Global state for temperature chart
         let currentTemperatureView = 'realtime';
         
+        // Global state for air quality time range
+        let currentAirQualityTimeRange = '24h';
+        
         // Function to fetch and update temperature history
         async function fetchTemperatureHistory() {
             try {
@@ -715,7 +723,7 @@
         // Function to fetch and update air quality history
         async function fetchAirQualityHistory() {
             try {
-                const response = await fetch('/api/air-quality-history');
+                const response = await fetch(`/api/air-quality-history?range=${currentAirQualityTimeRange}`);
                 const data = await response.json();
                 
                 console.log('Air quality data received:', data);
@@ -825,6 +833,41 @@
             } catch (error) {
                 console.error('Error fetching air quality history:', error);
             }
+        }
+        
+        // Function to switch air quality time range
+        function showAirQualityData(timeRange) {
+            currentAirQualityTimeRange = timeRange;
+            
+            // Update button states
+            document.getElementById('aq-1h-btn').classList.remove('active');
+            document.getElementById('aq-6h-btn').classList.remove('active');
+            document.getElementById('aq-24h-btn').classList.remove('active');
+            document.getElementById(`aq-${timeRange}-btn`).classList.add('active');
+            
+            // Update chart titles
+            let intervalText, hoursText;
+            switch(timeRange) {
+                case '1h':
+                    intervalText = '2-minute intervals';
+                    hoursText = '1 hour';
+                    break;
+                case '6h':
+                    intervalText = '5-minute intervals';
+                    hoursText = '6 hours';
+                    break;
+                case '24h':
+                default:
+                    intervalText = '15-minute intervals';
+                    hoursText = '24 hours';
+                    break;
+            }
+            
+            document.getElementById('particles-chart-title').textContent = `Particle Concentrations (${hoursText}, ${intervalText})`;
+            document.getElementById('aqi-chart-title').textContent = `Air Quality Index (${hoursText}, ${intervalText})`;
+            
+            // Fetch new data
+            fetchAirQualityHistory();
         }
         
         // Initial load

@@ -163,6 +163,62 @@ def get_15min_averages_24h() -> List[Dict]:
         
         return [dict(row) for row in rows]
 
+def get_interval_averages(hours: int = 24, interval_minutes: int = 15) -> List[Dict]:
+    """Get interval averages for a specified time period with configurable interval
+    
+    Args:
+        hours: Number of hours to look back (1, 6, or 24)
+        interval_minutes: Interval size in minutes (2, 5, or 15)
+    
+    Returns:
+        List of dictionaries with interval averages
+    """
+    with get_db_connection() as conn:
+        cutoff_time = datetime.datetime.now() - datetime.timedelta(hours=hours)
+        
+        # Build the interval time formatting based on interval_minutes
+        if interval_minutes == 2:
+            # 2-minute intervals: round to nearest 2 minutes
+            interval_sql = """
+                strftime('%Y-%m-%d %H:', timestamp) || 
+                printf('%02d:00', (CAST(strftime('%M', timestamp) AS INTEGER) / 2) * 2)
+            """
+        elif interval_minutes == 5:
+            # 5-minute intervals: round to nearest 5 minutes
+            interval_sql = """
+                strftime('%Y-%m-%d %H:', timestamp) || 
+                printf('%02d:00', (CAST(strftime('%M', timestamp) AS INTEGER) / 5) * 5)
+            """
+        else:
+            # Default 15-minute intervals
+            interval_sql = """
+                strftime('%Y-%m-%d %H:', timestamp) || 
+                CASE 
+                    WHEN CAST(strftime('%M', timestamp) AS INTEGER) < 15 THEN '00:00'
+                    WHEN CAST(strftime('%M', timestamp) AS INTEGER) < 30 THEN '15:00'
+                    WHEN CAST(strftime('%M', timestamp) AS INTEGER) < 45 THEN '30:00'
+                    ELSE '45:00'
+                END
+            """
+        
+        query = f"""
+            SELECT 
+                {interval_sql} as interval_time,
+                AVG(pm1_0) as avg_pm1_0,
+                AVG(pm2_5) as avg_pm2_5,
+                AVG(pm10) as avg_pm10,
+                AVG(aqi) as avg_aqi,
+                AVG(temperature) as avg_temperature,
+                COUNT(*) as reading_count
+            FROM air_quality_readings
+            WHERE timestamp > ?
+            GROUP BY interval_time
+            ORDER BY interval_time ASC
+        """
+        
+        rows = conn.execute(query, (cutoff_time,)).fetchall()
+        return [dict(row) for row in rows]
+
 def cleanup_old_readings():
     """Remove readings older than 24 hours from both tables"""
     with get_db_connection() as conn:
