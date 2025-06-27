@@ -22,16 +22,31 @@ fi
 CURRENT_DIR=$(pwd)
 
 # Create service files from templates
-# Use the systemd directory in the project
-PARENT_DIR=$(dirname "$CURRENT_DIR")
+# Determine the project directory (should contain systemd folder)
+if [ -d "$CURRENT_DIR/systemd" ]; then
+    PROJECT_DIR="$CURRENT_DIR"
+elif [ -d "$(dirname "$CURRENT_DIR")/systemd" ]; then
+    PROJECT_DIR="$(dirname "$CURRENT_DIR")"
+else
+    echo "Error: Cannot find systemd directory. Please run from the pi_air project directory."
+    exit 1
+fi
+
+echo "Using project directory: $PROJECT_DIR"
 
 # Process both service files
 for service in "pimonitor" "air-quality-monitor"; do
     echo "Installing $service.service..."
+    
+    if [ ! -f "$PROJECT_DIR/systemd/$service.service" ]; then
+        echo "Error: $PROJECT_DIR/systemd/$service.service not found"
+        exit 1
+    fi
+    
     sed -e "s|User=weber|User=$CURRENT_USER|g" \
         -e "s|Group=weber|Group=$CURRENT_USER|g" \
-        -e "s|/home/weber/pi_air|$PARENT_DIR|g" \
-        $PARENT_DIR/systemd/$service.service > /tmp/$service.service
+        -e "s|/home/weber/pi_air|$PROJECT_DIR|g" \
+        "$PROJECT_DIR/systemd/$service.service" > /tmp/$service.service
     
     # Copy service file
     cp /tmp/$service.service /etc/systemd/system/
