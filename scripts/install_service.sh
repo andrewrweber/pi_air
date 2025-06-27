@@ -9,7 +9,7 @@ if [ "$EUID" -ne 0 ]; then
    exit 1
 fi
 
-# Update service file with current user and paths
+# Automatically detect current user and paths
 # Use SUDO_USER if available, otherwise fall back to logname or current user
 if [ -n "$SUDO_USER" ]; then
     CURRENT_USER=$SUDO_USER
@@ -19,10 +19,11 @@ else
     CURRENT_USER=$(whoami)
 fi
 
-CURRENT_DIR=$(pwd)
+# Get the primary group for the user
+CURRENT_GROUP=$(id -gn "$CURRENT_USER")
 
-# Create service files from templates
 # Determine the project directory (should contain systemd folder)
+CURRENT_DIR=$(pwd)
 if [ -d "$CURRENT_DIR/systemd" ]; then
     PROJECT_DIR="$CURRENT_DIR"
 elif [ -d "$(dirname "$CURRENT_DIR")/systemd" ]; then
@@ -32,7 +33,30 @@ else
     exit 1
 fi
 
-echo "Using project directory: $PROJECT_DIR"
+# Convert to absolute path
+PROJECT_DIR=$(readlink -f "$PROJECT_DIR")
+
+echo "Detected configuration:"
+echo "  User: $CURRENT_USER"
+echo "  Group: $CURRENT_GROUP" 
+echo "  Project directory: $PROJECT_DIR"
+echo
+
+# Verify the virtual environment exists
+if [ ! -f "$PROJECT_DIR/venv/bin/python" ]; then
+    echo "Warning: Virtual environment not found at $PROJECT_DIR/venv/"
+    echo "Please ensure you have created the virtual environment:"
+    echo "  cd $PROJECT_DIR"
+    echo "  python3 -m venv venv"
+    echo "  source venv/bin/activate"
+    echo "  pip install -r requirements.txt"
+    echo
+    read -p "Continue anyway? (y/N): " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        exit 1
+    fi
+fi
 
 # Process both service files
 for service in "pimonitor" "air-quality-monitor"; do
@@ -43,9 +67,10 @@ for service in "pimonitor" "air-quality-monitor"; do
         exit 1
     fi
     
-    sed -e "s|User=weber|User=$CURRENT_USER|g" \
-        -e "s|Group=weber|Group=$CURRENT_USER|g" \
-        -e "s|/home/weber/pi_air|$PROJECT_DIR|g" \
+    # Replace template variables with actual values
+    sed -e "s|{{USER}}|$CURRENT_USER|g" \
+        -e "s|{{GROUP}}|$CURRENT_GROUP|g" \
+        -e "s|{{PROJECT_DIR}}|$PROJECT_DIR|g" \
         "$PROJECT_DIR/systemd/$service.service" > /tmp/$service.service
     
     # Copy service file

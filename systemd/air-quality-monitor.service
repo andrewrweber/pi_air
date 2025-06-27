@@ -5,11 +5,11 @@ Wants=network.target
 
 [Service]
 Type=simple
-User=weber
-Group=weber
-WorkingDirectory=/home/weber/pi_air
-Environment=PATH=/home/weber/pi_air/venv/bin
-ExecStart=/home/weber/pi_air/venv/bin/python /home/weber/pi_air/src/air_quality_monitor.py
+User={{USER}}
+Group={{GROUP}}
+WorkingDirectory={{PROJECT_DIR}}
+Environment=PATH={{PROJECT_DIR}}/venv/bin
+ExecStart={{PROJECT_DIR}}/venv/bin/python {{PROJECT_DIR}}/src/air_quality_monitor.py
 Restart=always
 RestartSec=10
 
