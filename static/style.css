@@ -282,29 +282,34 @@ h1 {
     margin-bottom: 1rem;
 }
 
-.temperature-section > div {
+.temperature-section .chart-container {
     position: relative;
-    height: 300px;
+    height: 250px;
     width: 100%;
 }
 
 .chart-controls {
-    margin-top: 15px;
+    margin-top: 10px;
     text-align: center;
     display: flex;
     gap: 10px;
     justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
 }
 
 .chart-btn {
     background: #f7fafc;
-    border: 2px solid #e2e8f0;
-    padding: 8px 16px;
-    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+    padding: 4px 12px;
+    border-radius: 4px;
     cursor: pointer;
-    font-size: 0.9em;
+    font-size: 0.85em;
     color: #4a5568;
     transition: all 0.3s ease;
+    display: inline-block;
+    height: auto;
+    line-height: 1.4;
 }
 
 .chart-btn:hover {
