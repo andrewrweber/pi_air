@@ -13,7 +13,8 @@ from collections import deque
 import logging
 from database import (get_latest_reading, get_hourly_averages_24h, get_15min_averages_24h, get_database_stats,
                      insert_system_reading, get_latest_system_reading, get_system_readings_last_24h, 
-                     get_system_hourly_averages_24h, init_database, get_interval_averages)
+                     get_system_hourly_averages_24h, init_database, get_interval_averages, 
+                     get_temperature_history_optimized)
 
 app = Flask(__name__, 
             template_folder='../templates',
@@ -80,10 +81,12 @@ def get_cpu_temperature() -> Optional[float]:
     return None
 
 def sample_temperature_and_system_stats():
-    """Background thread to sample CPU temperature and system stats every 30 seconds"""
+    """Background thread to sample CPU temperature and system stats every 5 seconds"""
     global latest_temperature
     last_db_write = 0
     db_write_interval = 30  # Write to database every 30 seconds
+    
+    logger.info("Starting temperature and system stats collection thread")
     
     while True:
         try:
@@ -95,11 +98,18 @@ def sample_temperature_and_system_stats():
             memory_usage = psutil.virtual_memory().percent
             disk_usage = psutil.disk_usage('/').percent
             
-            if temp is not None:
-                timestamp = datetime.datetime.now().isoformat()
-                with temperature_lock:
-                    temperature_history.append((timestamp, temp))
+            # Always update real-time history, even if temp is None (for debugging)
+            timestamp = datetime.datetime.now().isoformat()
+            with temperature_lock:
+                temperature_history.append((timestamp, temp))
+                if temp is not None:
                     latest_temperature = temp
+            
+            # Log temperature collection for debugging
+            if temp is not None:
+                logger.debug(f"Temperature collected: {temp}°C at {timestamp}")
+            else:
+                logger.debug(f"Temperature collection failed at {timestamp}")
             
             # Write to database every 30 seconds
             if current_time - last_db_write >= db_write_interval:
@@ -283,20 +293,33 @@ def stats_api():
 def temperature_history_api():
     """API endpoint for temperature history (both real-time and database)"""
     try:
-        # Get real-time history for immediate display
+        # Get real-time history for immediate display (last 10 minutes)
         with temperature_lock:
             real_time_history = [
                 {'timestamp': ts, 'temperature': temp} 
                 for ts, temp in temperature_history
+                if temp is not None  # Filter out None values
             ]
         
-        # Get database history for longer term trends
-        db_history = get_system_readings_last_24h()
+        # If real-time history is empty, try to get recent data from database
+        if not real_time_history:
+            logger.warning("Real-time temperature history is empty, falling back to recent database data")
+            recent_data = get_temperature_history_optimized(hours=0.5, max_points=60)  # Last 30 minutes, 60 points
+            real_time_history = [
+                {'timestamp': row['timestamp'], 'temperature': row['cpu_temp']}
+                for row in recent_data
+                if row['cpu_temp'] is not None
+            ]
+        
+        # Get optimized database history for longer term trends (24 hours, max 100 points)
+        db_history = get_temperature_history_optimized(hours=24, max_points=100)
         
         response_data = {
             'real_time_history': real_time_history,
             'database_history': db_history
         }
+        
+        logger.debug(f"Temperature API: real-time={len(real_time_history)} points, database={len(db_history)} points")
         
         response = jsonify(response_data)
         # Add explicit CORS headers for development
