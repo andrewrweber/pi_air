@@ -120,7 +120,10 @@ def sample_temperature_and_system_stats():
                         memory_usage=memory_usage,
                         disk_usage=disk_usage
                     )
-                    logger.debug(f"Inserted system reading: temp={temp}, CPU={cpu_usage}%, mem={memory_usage}%")
+                    if temp is not None:
+                        logger.debug(f"Inserted system reading: temp={temp}°C, CPU={cpu_usage}%, mem={memory_usage}%")
+                    else:
+                        logger.warning(f"Inserted system reading with NULL temperature: CPU={cpu_usage}%, mem={memory_usage}%")
                     last_db_write = current_time
                 except Exception as e:
                     logger.error(f"Error writing system reading to database: {e}")
@@ -339,6 +342,13 @@ def system_history_api():
         
         # Get latest system reading
         latest_reading = get_latest_system_reading()
+        
+        # Log for debugging temperature issues
+        temp_count = sum(1 for row in hourly_data if row.get('avg_cpu_temp') is not None)
+        logger.debug(f"System history API: {len(hourly_data)} hourly records, {temp_count} with valid temperature")
+        
+        if hourly_data:
+            logger.debug(f"Latest hourly record: {hourly_data[-1]}")
         
         response_data = {
             'hourly_averages': hourly_data,
