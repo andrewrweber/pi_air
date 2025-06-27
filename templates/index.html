@@ -430,10 +430,16 @@
                 
                 // Update chart based on current view
                 if (currentTemperatureView === 'realtime' && data.real_time_history && data.real_time_history.length > 0) {
-                    // Format timestamps as HH:MM:SS for real-time data
+                    // Format timestamps for real-time data
                     const labels = data.real_time_history.map(item => {
                         const date = new Date(item.timestamp);
-                        return date.toLocaleTimeString();
+                        return date.toLocaleString('en-US', {
+                            hour: 'numeric',
+                            minute: '2-digit',
+                            second: '2-digit',
+                            timeZone: 'America/Los_Angeles',
+                            timeZoneName: 'short'
+                        });
                     });
                     const temperatures = data.real_time_history.map(item => item.temperature);
                     
