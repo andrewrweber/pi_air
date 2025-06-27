@@ -786,10 +786,34 @@
             }
         }
 
-        // Helper function to format timestamp for display
+        // Helper function to format timestamp for display in Pacific Time
         function formatTimestamp(timestamp) {
             const date = new Date(timestamp);
-            return date.toLocaleDateString() + ' at ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            
+            // Convert to Pacific Time (handles both PST and PDT automatically)
+            const pacificTime = new Date(date.toLocaleString("en-US", {timeZone: "America/Los_Angeles"}));
+            
+            // Format the date and time
+            const formattedDate = pacificTime.toLocaleDateString('en-US', {
+                month: 'numeric',
+                day: 'numeric',
+                year: 'numeric',
+                timeZone: 'America/Los_Angeles'
+            });
+            
+            const formattedTime = pacificTime.toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+                timeZone: 'America/Los_Angeles'
+            });
+            
+            // Determine if we're in PDT or PST
+            const timeZoneAbbr = new Date().toLocaleDateString('en-US', {
+                timeZoneName: 'short',
+                timeZone: 'America/Los_Angeles'
+            }).split(', ')[1];
+            
+            return `${formattedDate} at ${formattedTime} ${timeZoneAbbr}`;
         }
 
         async function updateWorstAirQuality() {
