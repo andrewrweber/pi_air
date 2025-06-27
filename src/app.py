@@ -60,7 +60,12 @@ def get_size(bytes: float, suffix: str = "B") -> str:
 def get_cpu_temperature() -> Optional[float]:
     """Get CPU temperature on Raspberry Pi"""
     # Skip temperature reading on non-Raspberry Pi systems
-    if platform.system() != 'Linux' or not os.path.exists('/usr/bin/vcgencmd'):
+    if platform.system() != 'Linux':
+        logger.debug("Not on Linux system, skipping temperature reading")
+        return None
+        
+    if not os.path.exists('/usr/bin/vcgencmd'):
+        logger.warning("vcgencmd not found at /usr/bin/vcgencmd")
         return None
         
     try:
@@ -71,13 +76,27 @@ def get_cpu_temperature() -> Optional[float]:
             text=True, 
             timeout=2
         )
+        
         if result.returncode == 0:
             # Parse temperature from format: temp=45.6'C
             temp_str = result.stdout.strip()
+            logger.debug(f"vcgencmd output: '{temp_str}'")
             temp_value = temp_str.split('=')[1].split("'")[0]
             return float(temp_value)
-    except (subprocess.TimeoutExpired, subprocess.SubprocessError, ValueError, IndexError, FileNotFoundError):
-        pass
+        else:
+            logger.warning(f"vcgencmd failed with return code {result.returncode}: {result.stderr.strip()}")
+            
+    except subprocess.TimeoutExpired:
+        logger.warning("vcgencmd command timed out")
+    except subprocess.SubprocessError as e:
+        logger.warning(f"vcgencmd subprocess error: {e}")
+    except (ValueError, IndexError) as e:
+        logger.warning(f"Failed to parse temperature from vcgencmd output: {e}")
+    except FileNotFoundError:
+        logger.warning("vcgencmd command not found")
+    except Exception as e:
+        logger.warning(f"Unexpected error reading temperature: {e}")
+        
     return None
 
 def sample_temperature_and_system_stats():
