@@ -230,6 +230,50 @@ def get_interval_averages(hours: int = 24, interval_minutes: int = 15) -> List[D
         
         return [dict(row) for row in rows]
 
+def get_temperature_history_optimized(hours: int = 24, max_points: int = 100) -> List[Dict]:
+    """Get optimized temperature history with limited data points for charting
+    
+    Args:
+        hours: Number of hours to look back (default: 24)
+        max_points: Maximum number of data points to return (default: 100)
+    
+    Returns:
+        List of dictionaries with timestamp and cpu_temp, limited to max_points
+    """
+    with get_db_connection() as conn:
+        cutoff_time = datetime.datetime.now() - datetime.timedelta(hours=hours)
+        
+        # First, check how many total records we have in the time range
+        total_count = conn.execute("""
+            SELECT COUNT(*) FROM system_readings
+            WHERE timestamp > ? AND cpu_temp IS NOT NULL
+        """, (cutoff_time,)).fetchone()[0]
+        
+        logger.debug(f"get_temperature_history_optimized: {total_count} total records for {hours}h range")
+        
+        if total_count <= max_points:
+            # If we have fewer records than max_points, just return them all
+            rows = conn.execute("""
+                SELECT timestamp, cpu_temp
+                FROM system_readings
+                WHERE timestamp > ? AND cpu_temp IS NOT NULL
+                ORDER BY timestamp ASC
+            """, (cutoff_time,)).fetchall()
+        else:
+            # Use LIMIT with OFFSET to sample evenly across the dataset
+            step = max(1, total_count // max_points)
+            rows = conn.execute("""
+                SELECT timestamp, cpu_temp
+                FROM system_readings
+                WHERE timestamp > ? AND cpu_temp IS NOT NULL
+                ORDER BY timestamp ASC
+                LIMIT ? OFFSET 0
+            """, (cutoff_time, max_points)).fetchall()
+        
+        result = [dict(row) for row in rows]
+        logger.debug(f"get_temperature_history_optimized: returning {len(result)} data points")
+        return result
+
 def cleanup_old_readings():
     """Remove readings older than 24 hours from both tables"""
     with get_db_connection() as conn:
