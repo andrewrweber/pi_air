@@ -48,15 +48,30 @@ chown $CURRENT_USER:$CURRENT_USER /var/log/air_quality_monitor.log
 # Reload systemd
 systemctl daemon-reload
 
-# Enable services
+# Unmask services (in case they were previously masked)
+systemctl unmask pimonitor.service 2>/dev/null || true
+systemctl unmask air-quality-monitor.service 2>/dev/null || true
+
+# Stop and disable any existing services
+systemctl stop pimonitor.service 2>/dev/null || true
+systemctl stop air-quality-monitor.service 2>/dev/null || true
+systemctl disable pimonitor.service 2>/dev/null || true
+systemctl disable air-quality-monitor.service 2>/dev/null || true
+
+# Reload systemd again after any changes
+systemctl daemon-reload
+
+# Enable and start services
 systemctl enable pimonitor.service
 systemctl enable air-quality-monitor.service
+systemctl start pimonitor.service
+systemctl start air-quality-monitor.service
 
-echo "Services installed successfully!"
+echo "Services installed and started successfully!"
 echo ""
-echo "To start the services now:"
-echo "  sudo systemctl start pimonitor.service"
-echo "  sudo systemctl start air-quality-monitor.service"
+echo "Service status:"
+systemctl is-active pimonitor.service && echo "  ✓ pimonitor.service is running" || echo "  ✗ pimonitor.service failed to start"
+systemctl is-active air-quality-monitor.service && echo "  ✓ air-quality-monitor.service is running" || echo "  ✗ air-quality-monitor.service failed to start"
 echo ""
 echo "To check service status:"
 echo "  sudo systemctl status pimonitor.service"
