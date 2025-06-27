@@ -294,6 +294,8 @@ h1 {
     display: flex;
     gap: 10px;
     justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
 }
 
 .chart-btn {
@@ -305,6 +307,9 @@ h1 {
     font-size: 0.85em;
     color: #4a5568;
     transition: all 0.3s ease;
+    display: inline-block;
+    height: auto;
+    line-height: 1.4;
 }
 
 .chart-btn:hover {
