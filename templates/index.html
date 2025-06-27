@@ -90,14 +90,24 @@
                 </div>
                 
                 <div class="air-quality-section" id="air-quality-history-section">
-                    <h2>Particle Concentrations (24 hours, 15-minute intervals)</h2>
+                    <h2 id="particles-chart-title">Particle Concentrations (24 hours, 15-minute intervals)</h2>
                     <div style="position: relative; height:350px; width:100%;">
                         <canvas id="particlesChart"></canvas>
                     </div>
+                    <div class="chart-controls">
+                        <button id="particles-1h-btn" class="chart-btn" onclick="showParticlesData('1h')">1 Hour</button>
+                        <button id="particles-6h-btn" class="chart-btn" onclick="showParticlesData('6h')">6 Hours</button>
+                        <button id="particles-24h-btn" class="chart-btn active" onclick="showParticlesData('24h')">24 Hours</button>
+                    </div>
                     
-                    <h2 style="margin-top: 2rem;">Air Quality Index (24 hours, 15-minute intervals)</h2>
+                    <h2 style="margin-top: 2rem;" id="aqi-chart-title">Air Quality Index (24 hours, 15-minute intervals)</h2>
                     <div style="position: relative; height:300px; width:100%;">
                         <canvas id="aqiChart"></canvas>
+                    </div>
+                    <div class="chart-controls">
+                        <button id="aqi-1h-btn" class="chart-btn" onclick="showAQIData('1h')">1 Hour</button>
+                        <button id="aqi-6h-btn" class="chart-btn" onclick="showAQIData('6h')">6 Hours</button>
+                        <button id="aqi-24h-btn" class="chart-btn active" onclick="showAQIData('24h')">24 Hours</button>
                     </div>
                     <div class="db-stats" id="db-stats"></div>
                 </div>
@@ -422,6 +432,17 @@
         // Global state for temperature chart
         let currentTemperatureView = 'realtime';
         
+        // Global state for air quality time ranges (separate for each chart)
+        let currentParticlesTimeRange = '24h';
+        let currentAQITimeRange = '24h';
+        
+        // Store the fetched data globally to avoid unnecessary API calls
+        let cachedAirQualityData = {
+            '1h': null,
+            '6h': null, 
+            '24h': null
+        };
+        
         // Function to fetch and update temperature history
         async function fetchTemperatureHistory() {
             try {
@@ -712,119 +733,266 @@
             }
         }
         
-        // Function to fetch and update air quality history
-        async function fetchAirQualityHistory() {
+        // Function to fetch air quality data for a specific time range
+        async function fetchAirQualityData(range) {
+            if (cachedAirQualityData[range]) {
+                return cachedAirQualityData[range];
+            }
+            
             try {
-                const response = await fetch('/api/air-quality-history');
+                const response = await fetch(`/api/air-quality-history?range=${range}`);
                 const data = await response.json();
                 
-                console.log('Air quality data received:', data);
-                console.log('First interval raw:', data.interval_averages[0]?.interval_time);
-                if (data.interval_averages[0]) {
-                    const rawDate = new Date(data.interval_averages[0].interval_time);
-                    const utcDate = new Date(data.interval_averages[0].interval_time + 'Z');
-                    console.log('Raw date parse:', rawDate.toISOString());
-                    console.log('UTC date parse:', utcDate.toISOString());
-                    console.log('PST converted:', utcDate.toLocaleString('en-US', { 
-                        timeZone: 'America/Los_Angeles',
-                        timeZoneName: 'short'
-                    }));
-                }
+                console.log(`Air quality data received for ${range}:`, data);
                 
                 if (data.interval_averages && data.interval_averages.length > 0) {
-                    // Use actual data only - don't fill gaps yet
-                    // Prepare data for chart with PST/PDT conversion
-                    const labels = data.interval_averages.map(item => {
-                        // Create date from UTC timestamp and convert to PST/PDT
-                        const utcDate = new Date(item.interval_time + 'Z'); // Ensure UTC parsing
-                        return utcDate.toLocaleString('en-US', { 
-                            month: 'short', 
-                            day: 'numeric', 
-                            hour: 'numeric',
-                            minute: '2-digit',
-                            timeZone: 'America/Los_Angeles',
-                            timeZoneName: 'short'
-                        });
-                    });
-                    
-                    const pm1Data = data.interval_averages.map(item => item.avg_pm1_0);
-                    const pm25Data = data.interval_averages.map(item => item.avg_pm2_5);
-                    const pm10Data = data.interval_averages.map(item => item.avg_pm10);
-                    const aqiData = data.interval_averages.map(item => item.avg_aqi);
-                    
-                    console.log('Chart data arrays:', { pm1Data, pm25Data, pm10Data, aqiData });
-                    console.log('Non-null PM2.5 values:', pm25Data.filter(v => v !== null));
-                    
-                    // Calculate dynamic max values for better scaling
-                    const maxPM = Math.max(
-                        ...pm1Data.filter(v => v !== null),
-                        ...pm25Data.filter(v => v !== null),
-                        ...pm10Data.filter(v => v !== null),
-                        10  // minimum
-                    );
-                    const maxAQI = Math.max(...aqiData.filter(v => v !== null), 50);
-                    
-                    // Update particles chart
-                    particlesChart.options.scales.y.suggestedMax = Math.ceil(maxPM * 1.2);
-                    particlesChart.data.labels = labels;
-                    particlesChart.data.datasets[0].data = pm25Data;
-                    particlesChart.data.datasets[1].data = pm10Data;
-                    particlesChart.data.datasets[2].data = pm1Data;
-                    particlesChart.update();
-                    
-                    // Update AQI chart with dynamic scaling
-                    aqiChart.options.scales.y.suggestedMax = Math.ceil(maxAQI * 1.2);
-                    // Ensure we show AQI scale up to at least 200 to show color bands
-                    if (aqiChart.options.scales.y.suggestedMax < 200) {
-                        aqiChart.options.scales.y.suggestedMax = 200;
-                    }
-                    aqiChart.data.labels = labels;
-                    aqiChart.data.datasets[0].data = aqiData;
-                    
-                    // Color the AQI line based on the current value
-                    const currentAQI = aqiData[aqiData.length - 1];
-                    if (currentAQI !== null && currentAQI !== undefined) {
-                        let lineColor;
-                        if (currentAQI <= 50) lineColor = 'rgb(0, 228, 0)';
-                        else if (currentAQI <= 100) lineColor = 'rgb(255, 255, 0)';
-                        else if (currentAQI <= 150) lineColor = 'rgb(255, 126, 0)';
-                        else if (currentAQI <= 200) lineColor = 'rgb(255, 0, 0)';
-                        else if (currentAQI <= 300) lineColor = 'rgb(143, 63, 151)';
-                        else lineColor = 'rgb(126, 0, 35)';
-                        
-                        aqiChart.data.datasets[0].borderColor = lineColor;
-                        aqiChart.data.datasets[0].backgroundColor = lineColor.replace('rgb', 'rgba').replace(')', ', 0.1)');
-                    }
-                    
-                    aqiChart.update();
-                    
-                    // Update database stats
-                    if (data.stats) {
-                        const statsHtml = `
-                            <p class="db-stat-item">
-                                Total air quality readings: ${data.stats.total_air_quality_readings || data.stats.total_readings || 0} | 
-                                Database size: ${data.stats.db_size_kb} KB
-                            </p>
-                        `;
-                        document.getElementById('db-stats').innerHTML = statsHtml;
-                    }
+                    // Cache the data for this specific range
+                    cachedAirQualityData[range] = data.interval_averages;
+                    return data.interval_averages;
                 } else {
-                    console.log('No interval averages data available');
-                    // Show empty charts with message
-                    particlesChart.data.labels = ['No data available'];
-                    particlesChart.data.datasets[0].data = [];
-                    particlesChart.data.datasets[1].data = [];
-                    particlesChart.data.datasets[2].data = [];
-                    particlesChart.update();
-                    
-                    aqiChart.data.labels = ['No data available'];
-                    aqiChart.data.datasets[0].data = [];
-                    aqiChart.update();
+                    console.log(`No interval averages data available for ${range}`);
+                    cachedAirQualityData[range] = [];
+                    return [];
+                }
+                
+            } catch (error) {
+                console.error(`Error fetching air quality history for ${range}:`, error);
+                return [];
+            }
+        }
+        
+        // Function to fetch and update air quality history (legacy function for initial load)
+        async function fetchAirQualityHistory() {
+            try {
+                // Fetch 24h data for initial load
+                const data = await fetchAirQualityData('24h');
+                
+                // Update both charts with 24h data initially
+                updateParticlesChart(data);
+                updateAQIChart(data);
+                
+                // Also fetch database stats
+                const response = await fetch('/api/air-quality-history?range=24h');
+                const fullData = await response.json();
+                if (fullData.stats) {
+                    const statsHtml = `
+                        <p class="db-stat-item">
+                            Total air quality readings: ${fullData.stats.total_air_quality_readings || fullData.stats.total_readings || 0} | 
+                            Database size: ${fullData.stats.db_size_kb} KB
+                        </p>
+                    `;
+                    document.getElementById('db-stats').innerHTML = statsHtml;
                 }
                 
             } catch (error) {
                 console.error('Error fetching air quality history:', error);
+                // Show empty charts with message
+                particlesChart.data.labels = ['No data available'];
+                particlesChart.data.datasets[0].data = [];
+                particlesChart.data.datasets[1].data = [];
+                particlesChart.data.datasets[2].data = [];
+                particlesChart.update();
+                
+                aqiChart.data.labels = ['No data available'];
+                aqiChart.data.datasets[0].data = [];
+                aqiChart.update();
             }
+        }
+        
+        // Helper function to filter data by time range
+        function filterDataByTimeRange(data, timeRange) {
+            const now = new Date();
+            let hoursAgo;
+            switch(timeRange) {
+                case '1h':
+                    hoursAgo = 1;
+                    break;
+                case '6h':
+                    hoursAgo = 6;
+                    break;
+                default:
+                    hoursAgo = 24;
+            }
+            const cutoffTime = new Date(now.getTime() - (hoursAgo * 60 * 60 * 1000));
+            
+            return data.filter(item => {
+                const itemTime = new Date(item.interval_time + 'Z');
+                return itemTime >= cutoffTime;
+            });
+        }
+        
+        // Function to update particles chart
+        function updateParticlesChart(allData) {
+            // Filter data to only show points within the current particles time range
+            const filteredData = filterDataByTimeRange(allData, currentParticlesTimeRange);
+            
+            if (filteredData.length > 0) {
+                const labels = filteredData.map(item => {
+                    const utcDate = new Date(item.interval_time + 'Z');
+                    return utcDate.toLocaleString('en-US', { 
+                        month: 'short', 
+                        day: 'numeric', 
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        timeZone: 'America/Los_Angeles',
+                        timeZoneName: 'short'
+                    });
+                });
+                
+                const pm1Data = filteredData.map(item => item.avg_pm1_0);
+                const pm25Data = filteredData.map(item => item.avg_pm2_5);
+                const pm10Data = filteredData.map(item => item.avg_pm10);
+                
+                // Calculate dynamic max values for better scaling
+                const maxPM = Math.max(
+                    ...pm1Data.filter(v => v !== null),
+                    ...pm25Data.filter(v => v !== null),
+                    ...pm10Data.filter(v => v !== null),
+                    10  // minimum
+                );
+                
+                particlesChart.options.scales.y.suggestedMax = Math.ceil(maxPM * 1.2);
+                particlesChart.data.labels = labels;
+                particlesChart.data.datasets[0].data = pm25Data;
+                particlesChart.data.datasets[1].data = pm10Data;
+                particlesChart.data.datasets[2].data = pm1Data;
+                particlesChart.update();
+            } else {
+                const hoursAgo = currentParticlesTimeRange === '1h' ? 1 : (currentParticlesTimeRange === '6h' ? 6 : 24);
+                const noDataMsg = `No data in the last ${hoursAgo} hour${hoursAgo > 1 ? 's' : ''}`;
+                
+                particlesChart.data.labels = [noDataMsg];
+                particlesChart.data.datasets[0].data = [];
+                particlesChart.data.datasets[1].data = [];
+                particlesChart.data.datasets[2].data = [];
+                particlesChart.update();
+            }
+        }
+        
+        // Function to update AQI chart
+        function updateAQIChart(allData) {
+            // Filter data to only show points within the current AQI time range
+            const filteredData = filterDataByTimeRange(allData, currentAQITimeRange);
+            
+            if (filteredData.length > 0) {
+                const labels = filteredData.map(item => {
+                    const utcDate = new Date(item.interval_time + 'Z');
+                    return utcDate.toLocaleString('en-US', { 
+                        month: 'short', 
+                        day: 'numeric', 
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        timeZone: 'America/Los_Angeles',
+                        timeZoneName: 'short'
+                    });
+                });
+                
+                const aqiData = filteredData.map(item => item.avg_aqi);
+                const maxAQI = Math.max(...aqiData.filter(v => v !== null), 50);
+                
+                // Update AQI chart with dynamic scaling
+                aqiChart.options.scales.y.suggestedMax = Math.ceil(maxAQI * 1.2);
+                // Ensure we show AQI scale up to at least 200 to show color bands
+                if (aqiChart.options.scales.y.suggestedMax < 200) {
+                    aqiChart.options.scales.y.suggestedMax = 200;
+                }
+                aqiChart.data.labels = labels;
+                aqiChart.data.datasets[0].data = aqiData;
+                
+                // Color the AQI line based on the current value
+                const currentAQI = aqiData[aqiData.length - 1];
+                if (currentAQI !== null && currentAQI !== undefined) {
+                    let lineColor;
+                    if (currentAQI <= 50) lineColor = 'rgb(0, 228, 0)';
+                    else if (currentAQI <= 100) lineColor = 'rgb(255, 255, 0)';
+                    else if (currentAQI <= 150) lineColor = 'rgb(255, 126, 0)';
+                    else if (currentAQI <= 200) lineColor = 'rgb(255, 0, 0)';
+                    else if (currentAQI <= 300) lineColor = 'rgb(143, 63, 151)';
+                    else lineColor = 'rgb(126, 0, 35)';
+                    
+                    aqiChart.data.datasets[0].borderColor = lineColor;
+                    aqiChart.data.datasets[0].backgroundColor = lineColor.replace('rgb', 'rgba').replace(')', ', 0.1)');
+                }
+                
+                aqiChart.update();
+            } else {
+                const hoursAgo = currentAQITimeRange === '1h' ? 1 : (currentAQITimeRange === '6h' ? 6 : 24);
+                const noDataMsg = `No data in the last ${hoursAgo} hour${hoursAgo > 1 ? 's' : ''}`;
+                
+                aqiChart.data.labels = [noDataMsg];
+                aqiChart.data.datasets[0].data = [];
+                aqiChart.update();
+            }
+        }
+        
+        // Function to switch particles chart time range
+        async function showParticlesData(timeRange) {
+            currentParticlesTimeRange = timeRange;
+            
+            // Update button states
+            document.getElementById('particles-1h-btn').classList.remove('active');
+            document.getElementById('particles-6h-btn').classList.remove('active');
+            document.getElementById('particles-24h-btn').classList.remove('active');
+            document.getElementById(`particles-${timeRange}-btn`).classList.add('active');
+            
+            // Update chart title
+            let intervalText, hoursText;
+            switch(timeRange) {
+                case '1h':
+                    intervalText = '2-minute intervals';
+                    hoursText = '1 hour';
+                    break;
+                case '6h':
+                    intervalText = '5-minute intervals';
+                    hoursText = '6 hours';
+                    break;
+                case '24h':
+                default:
+                    intervalText = '15-minute intervals';
+                    hoursText = '24 hours';
+                    break;
+            }
+            
+            document.getElementById('particles-chart-title').textContent = `Particle Concentrations (${hoursText}, ${intervalText})`;
+            
+            // Fetch data for the specific time range with correct intervals
+            const data = await fetchAirQualityData(timeRange);
+            updateParticlesChart(data);
+        }
+        
+        // Function to switch AQI chart time range
+        async function showAQIData(timeRange) {
+            currentAQITimeRange = timeRange;
+            
+            // Update button states
+            document.getElementById('aqi-1h-btn').classList.remove('active');
+            document.getElementById('aqi-6h-btn').classList.remove('active');
+            document.getElementById('aqi-24h-btn').classList.remove('active');
+            document.getElementById(`aqi-${timeRange}-btn`).classList.add('active');
+            
+            // Update chart title
+            let intervalText, hoursText;
+            switch(timeRange) {
+                case '1h':
+                    intervalText = '2-minute intervals';
+                    hoursText = '1 hour';
+                    break;
+                case '6h':
+                    intervalText = '5-minute intervals';
+                    hoursText = '6 hours';
+                    break;
+                case '24h':
+                default:
+                    intervalText = '15-minute intervals';
+                    hoursText = '24 hours';
+                    break;
+            }
+            
+            document.getElementById('aqi-chart-title').textContent = `Air Quality Index (${hoursText}, ${intervalText})`;
+            
+            // Fetch data for the specific time range with correct intervals
+            const data = await fetchAirQualityData(timeRange);
+            updateAQIChart(data);
         }
         
         // Initial load

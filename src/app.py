@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template, jsonify, request
 from flask_cors import CORS
 import psutil
 import platform
@@ -13,7 +13,7 @@ from collections import deque
 import logging
 from database import (get_latest_reading, get_hourly_averages_24h, get_15min_averages_24h, get_database_stats,
                      insert_system_reading, get_latest_system_reading, get_system_readings_last_24h, 
-                     get_system_hourly_averages_24h, init_database)
+                     get_system_hourly_averages_24h, init_database, get_interval_averages)
 
 app = Flask(__name__, 
             template_folder='../templates',
@@ -353,17 +353,29 @@ def air_quality_latest_api():
 
 @app.route('/api/air-quality-history')
 def air_quality_history_api():
-    """API endpoint for 24-hour air quality history"""
+    """API endpoint for air quality history with configurable time range"""
     try:
-        # Get 15-minute averages for the chart
-        interval_data = get_15min_averages_24h()
+        # Get time range from query parameter, default to 24h
+        time_range = request.args.get('range', '24h')
+        
+        # Get interval averages based on time range
+        if time_range == '1h':
+            # 1 hour with 2-minute intervals
+            interval_data = get_interval_averages(hours=1, interval_minutes=2)
+        elif time_range == '6h':
+            # 6 hours with 5-minute intervals
+            interval_data = get_interval_averages(hours=6, interval_minutes=5)
+        else:
+            # Default: 24 hours with 15-minute intervals
+            interval_data = get_15min_averages_24h()
         
         # Get database stats
         db_stats = get_database_stats()
         
         response_data = {
             'interval_averages': interval_data,
-            'stats': db_stats
+            'stats': db_stats,
+            'time_range': time_range
         }
         
         response = jsonify(response_data)
