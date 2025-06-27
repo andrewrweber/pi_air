@@ -51,9 +51,26 @@
         </div>
         
                 <div class="temperature-section">
-                    <h2>CPU Temperature History (10 minutes)</h2>
+                    <h2>CPU Temperature History</h2>
                     <div style="position: relative; height:300px; width:100%;">
                         <canvas id="temperatureChart"></canvas>
+                    </div>
+                    <div class="chart-controls">
+                        <button id="temp-realtime-btn" class="chart-btn active" onclick="showTemperatureData('realtime')">Real-time (10min)</button>
+                        <button id="temp-database-btn" class="chart-btn" onclick="showTemperatureData('database')">Historical (24h)</button>
+                    </div>
+                </div>
+                
+                <div class="system-metrics-section">
+                    <h2>System Metrics History (24 hours)</h2>
+                    <div style="position: relative; height:400px; width:100%;">
+                        <canvas id="systemMetricsChart"></canvas>
+                    </div>
+                    <div class="metrics-controls">
+                        <label><input type="checkbox" id="show-cpu-usage" checked> CPU Usage</label>
+                        <label><input type="checkbox" id="show-memory-usage" checked> Memory Usage</label>
+                        <label><input type="checkbox" id="show-disk-usage" checked> Disk Usage</label>
+                        <label><input type="checkbox" id="show-cpu-temp" checked> CPU Temperature</label>
                     </div>
                 </div>
             </div>
@@ -146,6 +163,100 @@
             }
         });
         
+        // Initialize system metrics chart
+        const sysCtx = document.getElementById('systemMetricsChart').getContext('2d');
+        const systemMetricsChart = new Chart(sysCtx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [
+                    {
+                        label: 'CPU Usage (%)',
+                        data: [],
+                        borderColor: 'rgb(255, 99, 132)',
+                        backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                        tension: 0.1,
+                        yAxisID: 'y-percentage',
+                        spanGaps: true
+                    },
+                    {
+                        label: 'Memory Usage (%)',
+                        data: [],
+                        borderColor: 'rgb(54, 162, 235)',
+                        backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                        tension: 0.1,
+                        yAxisID: 'y-percentage',
+                        spanGaps: true
+                    },
+                    {
+                        label: 'Disk Usage (%)',
+                        data: [],
+                        borderColor: 'rgb(255, 205, 86)',
+                        backgroundColor: 'rgba(255, 205, 86, 0.1)',
+                        tension: 0.1,
+                        yAxisID: 'y-percentage',
+                        spanGaps: true
+                    },
+                    {
+                        label: 'CPU Temperature (°C)',
+                        data: [],
+                        borderColor: 'rgb(75, 192, 192)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                        tension: 0.1,
+                        yAxisID: 'y-temperature',
+                        spanGaps: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Time'
+                        }
+                    },
+                    'y-percentage': {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: {
+                            display: true,
+                            text: 'Usage (%)'
+                        },
+                        min: 0,
+                        max: 100
+                    },
+                    'y-temperature': {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        title: {
+                            display: true,
+                            text: 'Temperature (°C)'
+                        },
+                        min: 30,
+                        max: 80,
+                        grid: {
+                            drawOnChartArea: false
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    }
+                }
+            }
+        });
+
         // Initialize air quality chart
         const aqCtx = document.getElementById('airQualityChart').getContext('2d');
         const airQualityChart = new Chart(aqCtx, {
@@ -237,28 +348,112 @@
             }
         });
         
+        // Global state for temperature chart
+        let currentTemperatureView = 'realtime';
+        
         // Function to fetch and update temperature history
         async function fetchTemperatureHistory() {
             try {
                 const response = await fetch('/api/temperature-history');
                 const data = await response.json();
                 
-                if (data.history && data.history.length > 0) {
-                    // Format timestamps as HH:MM:SS
-                    const labels = data.history.map(item => {
+                // Update chart based on current view
+                if (currentTemperatureView === 'realtime' && data.real_time_history && data.real_time_history.length > 0) {
+                    // Format timestamps as HH:MM:SS for real-time data
+                    const labels = data.real_time_history.map(item => {
                         const date = new Date(item.timestamp);
                         return date.toLocaleTimeString();
                     });
-                    const temperatures = data.history.map(item => item.temperature);
+                    const temperatures = data.real_time_history.map(item => item.temperature);
                     
                     temperatureChart.data.labels = labels;
                     temperatureChart.data.datasets[0].data = temperatures;
-                    temperatureChart.update('none'); // Disable animation for performance
+                    temperatureChart.update('none');
+                } else if (currentTemperatureView === 'database' && data.database_history && data.database_history.length > 0) {
+                    // Format timestamps for database data (longer timeframe)
+                    const labels = data.database_history.map(item => {
+                        const date = new Date(item.timestamp);
+                        return date.toLocaleString();
+                    });
+                    const temperatures = data.database_history.map(item => item.cpu_temp).filter(temp => temp !== null);
+                    
+                    temperatureChart.data.labels = labels;
+                    temperatureChart.data.datasets[0].data = temperatures;
+                    temperatureChart.update('none');
                 }
             } catch (error) {
                 console.error('Error fetching temperature history:', error);
             }
         }
+        
+        // Function to switch temperature data view
+        function showTemperatureData(view) {
+            currentTemperatureView = view;
+            
+            // Update button states
+            document.getElementById('temp-realtime-btn').classList.toggle('active', view === 'realtime');
+            document.getElementById('temp-database-btn').classList.toggle('active', view === 'database');
+            
+            // Refresh data
+            fetchTemperatureHistory();
+        }
+        
+        // Function to fetch and update system metrics history
+        async function fetchSystemHistory() {
+            try {
+                const response = await fetch('/api/system-history');
+                const data = await response.json();
+                
+                if (data.hourly_averages && data.hourly_averages.length > 0) {
+                    // Format timestamps for hourly data
+                    const labels = data.hourly_averages.map(item => {
+                        const date = new Date(item.hour);
+                        return date.toLocaleString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric', 
+                            hour: 'numeric',
+                            minute: '2-digit'
+                        });
+                    });
+                    
+                    const cpuUsageData = data.hourly_averages.map(item => item.avg_cpu_usage);
+                    const memoryUsageData = data.hourly_averages.map(item => item.avg_memory_usage);
+                    const diskUsageData = data.hourly_averages.map(item => item.avg_disk_usage);
+                    const cpuTempData = data.hourly_averages.map(item => item.avg_cpu_temp);
+                    
+                    // Update chart data
+                    systemMetricsChart.data.labels = labels;
+                    systemMetricsChart.data.datasets[0].data = cpuUsageData;
+                    systemMetricsChart.data.datasets[1].data = memoryUsageData;
+                    systemMetricsChart.data.datasets[2].data = diskUsageData;
+                    systemMetricsChart.data.datasets[3].data = cpuTempData;
+                    
+                    // Update chart visibility based on checkboxes
+                    updateSystemMetricsVisibility();
+                    
+                    systemMetricsChart.update('none');
+                }
+            } catch (error) {
+                console.error('Error fetching system history:', error);
+            }
+        }
+        
+        // Function to update system metrics chart visibility
+        function updateSystemMetricsVisibility() {
+            systemMetricsChart.data.datasets[0].hidden = !document.getElementById('show-cpu-usage').checked;
+            systemMetricsChart.data.datasets[1].hidden = !document.getElementById('show-memory-usage').checked;
+            systemMetricsChart.data.datasets[2].hidden = !document.getElementById('show-disk-usage').checked;
+            systemMetricsChart.data.datasets[3].hidden = !document.getElementById('show-cpu-temp').checked;
+            systemMetricsChart.update('none');
+        }
+        
+        // Add event listeners for system metrics checkboxes
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('show-cpu-usage').addEventListener('change', updateSystemMetricsVisibility);
+            document.getElementById('show-memory-usage').addEventListener('change', updateSystemMetricsVisibility);
+            document.getElementById('show-disk-usage').addEventListener('change', updateSystemMetricsVisibility);
+            document.getElementById('show-cpu-temp').addEventListener('change', updateSystemMetricsVisibility);
+        });
         
         // Function to fetch and display system information
         async function fetchSystemInfo() {
@@ -457,6 +652,7 @@
         fetchSystemInfo();
         fetchStats();
         fetchTemperatureHistory();
+        fetchSystemHistory();
         fetchAirQualityHistory();
         
         // Update stats every 5 seconds (reduced frequency for Pi Zero 2 W)
@@ -464,6 +660,9 @@
         
         // Update temperature history every 5 seconds to match sampling rate
         setInterval(fetchTemperatureHistory, 5000);
+        
+        // Update system metrics history every 60 seconds
+        setInterval(fetchSystemHistory, 60000);
         
         // Update air quality history every 30 seconds
         setInterval(fetchAirQualityHistory, 30000);

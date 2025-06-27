@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Database module for air quality data storage
+Database module for air quality and system monitoring data storage
 """
 
 import sqlite3
@@ -13,9 +13,9 @@ import os
 logger = logging.getLogger(__name__)
 
 # Use environment variable or default to data directory relative to project root
-DB_PATH = os.environ.get('AIR_QUALITY_DB_PATH', 
+DB_PATH = os.environ.get('MONITORING_DB_PATH', 
                         os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 
-                                    'data', 'air_quality.db'))
+                                    'data', 'monitoring.db'))
 
 @contextmanager
 def get_db_connection():
@@ -53,8 +53,26 @@ def init_database():
         
         # Create index on timestamp for faster queries
         conn.execute("""
-            CREATE INDEX IF NOT EXISTS idx_timestamp 
+            CREATE INDEX IF NOT EXISTS idx_air_quality_timestamp 
             ON air_quality_readings(timestamp DESC)
+        """)
+        
+        # Create system readings table for CPU temperature and other system metrics
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS system_readings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                cpu_temp REAL,
+                cpu_usage REAL,
+                memory_usage REAL,
+                disk_usage REAL
+            )
+        """)
+        
+        # Create index on system readings timestamp
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_system_timestamp 
+            ON system_readings(timestamp DESC)
         """)
         
         logger.info("Database initialized successfully")
@@ -146,16 +164,25 @@ def get_15min_averages_24h() -> List[Dict]:
         return [dict(row) for row in rows]
 
 def cleanup_old_readings():
-    """Remove readings older than 24 hours"""
+    """Remove readings older than 24 hours from both tables"""
     with get_db_connection() as conn:
         cutoff_time = datetime.datetime.now() - datetime.timedelta(hours=24)
-        deleted = conn.execute("""
+        
+        # Clean up air quality readings
+        air_deleted = conn.execute("""
             DELETE FROM air_quality_readings
             WHERE timestamp < ?
         """, (cutoff_time,)).rowcount
         
-        if deleted > 0:
-            logger.info(f"Cleaned up {deleted} old readings")
+        # Clean up system readings
+        system_deleted = conn.execute("""
+            DELETE FROM system_readings
+            WHERE timestamp < ?
+        """, (cutoff_time,)).rowcount
+        
+        total_deleted = air_deleted + system_deleted
+        if total_deleted > 0:
+            logger.info(f"Cleaned up {air_deleted} air quality readings and {system_deleted} system readings")
             # Vacuum to reclaim disk space
             conn.execute("VACUUM")
 
@@ -164,9 +191,14 @@ def get_database_stats() -> Dict:
     with get_db_connection() as conn:
         stats = {}
         
-        # Total readings
-        stats['total_readings'] = conn.execute(
+        # Total air quality readings
+        stats['total_air_quality_readings'] = conn.execute(
             "SELECT COUNT(*) FROM air_quality_readings"
+        ).fetchone()[0]
+        
+        # Total system readings
+        stats['total_system_readings'] = conn.execute(
+            "SELECT COUNT(*) FROM system_readings"
         ).fetchone()[0]
         
         # Oldest reading
@@ -181,3 +213,75 @@ def get_database_stats() -> Dict:
         ).fetchone()[0]
         
         return stats
+
+# System readings functions
+def insert_system_reading(cpu_temp: Optional[float] = None, 
+                         cpu_usage: Optional[float] = None,
+                         memory_usage: Optional[float] = None,
+                         disk_usage: Optional[float] = None):
+    """Insert a new system reading"""
+    with get_db_connection() as conn:
+        conn.execute("""
+            INSERT INTO system_readings 
+            (cpu_temp, cpu_usage, memory_usage, disk_usage)
+            VALUES (?, ?, ?, ?)
+        """, (cpu_temp, cpu_usage, memory_usage, disk_usage))
+        
+        logger.debug(f"Inserted system reading: CPU temp={cpu_temp}, CPU usage={cpu_usage}")
+
+def get_latest_system_reading() -> Optional[Dict]:
+    """Get the most recent system reading"""
+    with get_db_connection() as conn:
+        row = conn.execute("""
+            SELECT * FROM system_readings
+            ORDER BY timestamp DESC
+            LIMIT 1
+        """).fetchone()
+        
+        if row:
+            return dict(row)
+        return None
+
+def get_system_readings_last_24h() -> List[Dict]:
+    """Get all system readings from the last 24 hours"""
+    with get_db_connection() as conn:
+        cutoff_time = datetime.datetime.now() - datetime.timedelta(hours=24)
+        rows = conn.execute("""
+            SELECT * FROM system_readings
+            WHERE timestamp > ?
+            ORDER BY timestamp ASC
+        """, (cutoff_time,)).fetchall()
+        
+        return [dict(row) for row in rows]
+
+def get_system_hourly_averages_24h() -> List[Dict]:
+    """Get hourly averages for system metrics for the last 24 hours"""
+    with get_db_connection() as conn:
+        cutoff_time = datetime.datetime.now() - datetime.timedelta(hours=24)
+        rows = conn.execute("""
+            SELECT 
+                strftime('%Y-%m-%d %H:00:00', timestamp) as hour,
+                AVG(cpu_temp) as avg_cpu_temp,
+                AVG(cpu_usage) as avg_cpu_usage,
+                AVG(memory_usage) as avg_memory_usage,
+                AVG(disk_usage) as avg_disk_usage,
+                COUNT(*) as reading_count
+            FROM system_readings
+            WHERE timestamp > ?
+            GROUP BY hour
+            ORDER BY hour ASC
+        """, (cutoff_time,)).fetchall()
+        
+        return [dict(row) for row in rows]
+
+def cleanup_old_system_readings():
+    """Remove system readings older than 24 hours"""
+    with get_db_connection() as conn:
+        cutoff_time = datetime.datetime.now() - datetime.timedelta(hours=24)
+        deleted = conn.execute("""
+            DELETE FROM system_readings
+            WHERE timestamp < ?
+        """, (cutoff_time,)).rowcount
+        
+        if deleted > 0:
+            logger.info(f"Cleaned up {deleted} old system readings")
