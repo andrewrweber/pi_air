@@ -607,22 +607,24 @@
         // Function to update current air quality display with latest reading
         async function updateCurrentAirQuality() {
             try {
-                const response = await fetch('/api/air-quality-history');
+                const response = await fetch('/api/air-quality-latest');
                 const data = await response.json();
                 
-                // Update current reading display if we have recent data
-                if (data.interval_averages && data.interval_averages.length > 0) {
-                    const latest = data.interval_averages[data.interval_averages.length - 1];
-                    console.log('Latest air quality reading:', latest);
+                console.log('Latest air quality reading from API:', data);
+                
+                // Update current reading display with actual latest sensor reading
+                if (data.latest_reading) {
+                    const reading = data.latest_reading;
+                    console.log('Using latest sensor reading:', reading);
                     
-                    // Update current values with null checks
-                    document.getElementById('aqi-value').textContent = (latest.avg_aqi !== null && latest.avg_aqi !== undefined) ? Math.round(latest.avg_aqi) : '--';
-                    document.getElementById('pm1-value').textContent = (latest.avg_pm1_0 !== null && latest.avg_pm1_0 !== undefined) ? latest.avg_pm1_0.toFixed(1) : '--';
-                    document.getElementById('pm25-value').textContent = (latest.avg_pm2_5 !== null && latest.avg_pm2_5 !== undefined) ? latest.avg_pm2_5.toFixed(1) : '--';
-                    document.getElementById('pm10-value').textContent = (latest.avg_pm10 !== null && latest.avg_pm10 !== undefined) ? latest.avg_pm10.toFixed(1) : '--';
+                    // Update current values - these are actual sensor readings, not averages
+                    document.getElementById('aqi-value').textContent = reading.aqi || '--';
+                    document.getElementById('pm1-value').textContent = (reading.pm1_0 !== null && reading.pm1_0 !== undefined) ? reading.pm1_0.toFixed(1) : '--';
+                    document.getElementById('pm25-value').textContent = (reading.pm2_5 !== null && reading.pm2_5 !== undefined) ? reading.pm2_5.toFixed(1) : '--';
+                    document.getElementById('pm10-value').textContent = (reading.pm10 !== null && reading.pm10 !== undefined) ? reading.pm10.toFixed(1) : '--';
                     
                     // Update AQI level and color
-                    const aqi = latest.avg_aqi;
+                    const aqi = reading.aqi;
                     const aqiElement = document.getElementById('aqi-value');
                     const aqiLevelElement = document.getElementById('aqi-level');
                     
@@ -650,10 +652,12 @@
                         
                         aqiElement.style.color = color;
                         aqiLevelElement.textContent = level;
+                    } else {
+                        aqiLevelElement.textContent = '--';
                     }
                 } else {
-                    console.log('No interval averages available, trying stats API fallback');
-                    // Fallback to stats API if no history data available
+                    console.log('No latest reading available, trying stats API fallback');
+                    // Fallback to stats API if no latest reading available
                     try {
                         const statsResponse = await fetch('/api/stats');
                         const statsData = await statsResponse.json();

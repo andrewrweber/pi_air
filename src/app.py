@@ -331,6 +331,26 @@ def system_history_api():
         logger.error(f"Error in system_history_api: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/air-quality-latest')
+def air_quality_latest_api():
+    """API endpoint for the latest single air quality reading"""
+    try:
+        # Get the actual latest reading (not averaged)
+        latest_reading = get_latest_reading()
+        
+        response_data = {
+            'latest_reading': latest_reading
+        }
+        
+        response = jsonify(response_data)
+        # Add explicit CORS headers for development
+        if os.environ.get('FLASK_DEBUG', 'False').lower() == 'true':
+            response.headers['Access-Control-Allow-Origin'] = '*'
+        return response
+    except Exception as e:
+        logger.error(f"Error in air_quality_latest_api: {e}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/air-quality-history')
 def air_quality_history_api():
     """API endpoint for 24-hour air quality history"""
