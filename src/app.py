@@ -69,9 +69,9 @@ def get_cpu_temperature() -> Optional[float]:
         return None
         
     try:
-        # Use subprocess for better security than os.popen
+        # Use full path to vcgencmd for systemd service compatibility
         result = subprocess.run(
-            ['vcgencmd', 'measure_temp'], 
+            ['/usr/bin/vcgencmd', 'measure_temp'], 
             capture_output=True, 
             text=True, 
             timeout=2
