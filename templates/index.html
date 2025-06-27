@@ -613,12 +613,13 @@
                 // Update current reading display if we have recent data
                 if (data.interval_averages && data.interval_averages.length > 0) {
                     const latest = data.interval_averages[data.interval_averages.length - 1];
+                    console.log('Latest air quality reading:', latest);
                     
-                    // Update current values
-                    document.getElementById('aqi-value').textContent = Math.round(latest.avg_aqi) || '--';
-                    document.getElementById('pm1-value').textContent = latest.avg_pm1_0?.toFixed(1) || '--';
-                    document.getElementById('pm25-value').textContent = latest.avg_pm2_5?.toFixed(1) || '--';
-                    document.getElementById('pm10-value').textContent = latest.avg_pm10?.toFixed(1) || '--';
+                    // Update current values with null checks
+                    document.getElementById('aqi-value').textContent = (latest.avg_aqi !== null && latest.avg_aqi !== undefined) ? Math.round(latest.avg_aqi) : '--';
+                    document.getElementById('pm1-value').textContent = (latest.avg_pm1_0 !== null && latest.avg_pm1_0 !== undefined) ? latest.avg_pm1_0.toFixed(1) : '--';
+                    document.getElementById('pm25-value').textContent = (latest.avg_pm2_5 !== null && latest.avg_pm2_5 !== undefined) ? latest.avg_pm2_5.toFixed(1) : '--';
+                    document.getElementById('pm10-value').textContent = (latest.avg_pm10 !== null && latest.avg_pm10 !== undefined) ? latest.avg_pm10.toFixed(1) : '--';
                     
                     // Update AQI level and color
                     const aqi = latest.avg_aqi;
@@ -649,6 +650,40 @@
                         
                         aqiElement.style.color = color;
                         aqiLevelElement.textContent = level;
+                    }
+                } else {
+                    console.log('No interval averages available, trying stats API fallback');
+                    // Fallback to stats API if no history data available
+                    try {
+                        const statsResponse = await fetch('/api/stats');
+                        const statsData = await statsResponse.json();
+                        
+                        if (statsData.air_quality) {
+                            document.getElementById('aqi-value').textContent = statsData.air_quality.aqi;
+                            document.getElementById('aqi-level').textContent = statsData.air_quality.aqi_level;
+                            document.getElementById('pm1-value').textContent = statsData.air_quality.pm1_0;
+                            document.getElementById('pm25-value').textContent = statsData.air_quality.pm2_5;
+                            document.getElementById('pm10-value').textContent = statsData.air_quality.pm10;
+                            
+                            // Set AQI color
+                            const aqiElement = document.getElementById('aqi-value');
+                            const aqi = statsData.air_quality.aqi;
+                            if (aqi <= 50) {
+                                aqiElement.style.color = '#00e400';
+                            } else if (aqi <= 100) {
+                                aqiElement.style.color = '#ffff00';
+                            } else if (aqi <= 150) {
+                                aqiElement.style.color = '#ff7e00';
+                            } else if (aqi <= 200) {
+                                aqiElement.style.color = '#ff0000';
+                            } else if (aqi <= 300) {
+                                aqiElement.style.color = '#8f3f97';
+                            } else {
+                                aqiElement.style.color = '#7e0023';
+                            }
+                        }
+                    } catch (statsError) {
+                        console.error('Error fetching stats API fallback:', statsError);
                     }
                 }
             } catch (error) {
