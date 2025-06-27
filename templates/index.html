@@ -13,11 +13,11 @@
         
         <div class="tab-container">
             <div class="tab-buttons">
-                <button class="tab-button active" onclick="showTab('hardware')">Pi Hardware</button>
-                <button class="tab-button" onclick="showTab('air-quality')">Air Quality</button>
+                <button class="tab-button active" onclick="showTab('air-quality')">Air Quality</button>
+                <button class="tab-button" onclick="showTab('hardware')">Pi Hardware</button>
             </div>
             
-            <div id="hardware-tab" class="tab-content active">
+            <div id="hardware-tab" class="tab-content">
                 <div class="stats-grid">
             <div class="stat-card">
                 <h2>CPU</h2>
@@ -75,7 +75,7 @@
                 </div>
             </div>
             
-            <div id="air-quality-tab" class="tab-content">
+            <div id="air-quality-tab" class="tab-content active">
                 <div class="stats-grid">
                     <div class="stat-card" id="air-quality-card">
                         <h2>Current Air Quality</h2>
@@ -816,6 +816,7 @@
         fetchTemperatureHistory();
         fetchSystemHistory();
         fetchAirQualityHistory();
+        updateCurrentAirQuality(); // Load air quality immediately since it's the default tab
         
         // Update stats every 5 seconds (reduced frequency for Pi Zero 2 W)
         setInterval(fetchStats, 5000);
