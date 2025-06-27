@@ -43,11 +43,32 @@ git add .
 git commit -m "Your commit message"
 git push origin main
 
-# On Raspberry Pi to pull updates
+# On Raspberry Pi to pull updates (from /home/weber/pi_air)
+cd /home/weber/pi_air
 git pull origin main
 
 # If running as systemd service, restart after pulling
 sudo systemctl restart pimonitor.service
+sudo systemctl restart air-quality-monitor.service
+```
+
+### Systemd Service Setup
+```bash
+# Enable auto-start services on boot
+sudo systemctl enable pimonitor.service
+sudo systemctl enable air-quality-monitor.service
+
+# Start services immediately
+sudo systemctl start pimonitor.service
+sudo systemctl start air-quality-monitor.service
+
+# Check service status
+sudo systemctl status pimonitor.service
+sudo systemctl status air-quality-monitor.service
+
+# View service logs
+sudo journalctl -u pimonitor.service -f
+sudo journalctl -u air-quality-monitor.service -f
 ```
 
 ## Architecture Overview
@@ -86,6 +107,35 @@ The application includes Raspberry Pi specific functionality:
 3. Flask gathers system metrics via psutil
 4. Data returned as JSON and displayed in UI
 5. Process repeats every 2 seconds
+
+## Deployment
+
+### Raspberry Pi Setup
+
+The application is designed to run on Raspberry Pi with the user directory at `/home/weber/pi_air`.
+
+**Prerequisites:**
+- Python 3.7+
+- PMS7003 air quality sensor (connected via serial)
+- Virtual environment setup
+
+**Installation paths:**
+- Project directory: `/home/weber/pi_air`
+- Virtual environment: `/home/weber/pi_air/venv`
+- Service user: `weber`
+
+### Systemd Services
+
+Two systemd services handle automatic startup:
+
+1. **pimonitor.service** - Flask web application
+2. **air-quality-monitor.service** - PMS7003 sensor data collection
+
+Service files are located in `/etc/systemd/system/` and configured to:
+- Start automatically on boot
+- Restart on failure
+- Run as user `weber`
+- Log to systemd journal
 
 ## Important Considerations
 
