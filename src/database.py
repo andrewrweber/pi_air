@@ -217,6 +217,17 @@ def get_interval_averages(hours: int = 24, interval_minutes: int = 15) -> List[D
         """
         
         rows = conn.execute(query, (cutoff_time,)).fetchall()
+        
+        # Log for debugging
+        if rows:
+            logger.debug(f"get_interval_averages: Requested {hours}h with {interval_minutes}min intervals")
+            logger.debug(f"Cutoff time: {cutoff_time}")
+            logger.debug(f"First row timestamp: {rows[0]['interval_time']}")
+            logger.debug(f"Last row timestamp: {rows[-1]['interval_time']}")
+            logger.debug(f"Total rows returned: {len(rows)}")
+        else:
+            logger.debug(f"get_interval_averages: No data found for {hours}h range")
+        
         return [dict(row) for row in rows]
 
 def cleanup_old_readings():

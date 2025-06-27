@@ -740,25 +740,49 @@
                 }
                 
                 if (data.interval_averages && data.interval_averages.length > 0) {
-                    // Use actual data only - don't fill gaps yet
-                    // Prepare data for chart with PST/PDT conversion
-                    const labels = data.interval_averages.map(item => {
-                        // Create date from UTC timestamp and convert to PST/PDT
-                        const utcDate = new Date(item.interval_time + 'Z'); // Ensure UTC parsing
-                        return utcDate.toLocaleString('en-US', { 
-                            month: 'short', 
-                            day: 'numeric', 
-                            hour: 'numeric',
-                            minute: '2-digit',
-                            timeZone: 'America/Los_Angeles',
-                            timeZoneName: 'short'
-                        });
+                    // Filter data to only show points within the requested time range
+                    const now = new Date();
+                    let hoursAgo;
+                    switch(currentAirQualityTimeRange) {
+                        case '1h':
+                            hoursAgo = 1;
+                            break;
+                        case '6h':
+                            hoursAgo = 6;
+                            break;
+                        default:
+                            hoursAgo = 24;
+                    }
+                    const cutoffTime = new Date(now.getTime() - (hoursAgo * 60 * 60 * 1000));
+                    
+                    // Filter data points to only include those within the time range
+                    const filteredData = data.interval_averages.filter(item => {
+                        const itemTime = new Date(item.interval_time + 'Z');
+                        return itemTime >= cutoffTime;
                     });
                     
-                    const pm1Data = data.interval_averages.map(item => item.avg_pm1_0);
-                    const pm25Data = data.interval_averages.map(item => item.avg_pm2_5);
-                    const pm10Data = data.interval_averages.map(item => item.avg_pm10);
-                    const aqiData = data.interval_averages.map(item => item.avg_aqi);
+                    console.log(`Filtering data for ${currentAirQualityTimeRange}: ${data.interval_averages.length} total points, ${filteredData.length} within range`);
+                    
+                    if (filteredData.length > 0) {
+                        // Use actual data only - don't fill gaps yet
+                        // Prepare data for chart with PST/PDT conversion
+                        const labels = filteredData.map(item => {
+                            // Create date from UTC timestamp and convert to PST/PDT
+                            const utcDate = new Date(item.interval_time + 'Z'); // Ensure UTC parsing
+                            return utcDate.toLocaleString('en-US', { 
+                                month: 'short', 
+                                day: 'numeric', 
+                                hour: 'numeric',
+                                minute: '2-digit',
+                                timeZone: 'America/Los_Angeles',
+                                timeZoneName: 'short'
+                            });
+                        });
+                        
+                        const pm1Data = filteredData.map(item => item.avg_pm1_0);
+                        const pm25Data = filteredData.map(item => item.avg_pm2_5);
+                        const pm10Data = filteredData.map(item => item.avg_pm10);
+                        const aqiData = filteredData.map(item => item.avg_aqi);
                     
                     console.log('Chart data arrays:', { pm1Data, pm25Data, pm10Data, aqiData });
                     console.log('Non-null PM2.5 values:', pm25Data.filter(v => v !== null));
@@ -815,6 +839,21 @@
                             </p>
                         `;
                         document.getElementById('db-stats').innerHTML = statsHtml;
+                    }
+                    } else {
+                        // No data within the selected time range
+                        console.log(`No data available for the last ${hoursAgo} hour(s)`);
+                        const noDataMsg = `No data in the last ${hoursAgo} hour${hoursAgo > 1 ? 's' : ''}`;
+                        
+                        particlesChart.data.labels = [noDataMsg];
+                        particlesChart.data.datasets[0].data = [];
+                        particlesChart.data.datasets[1].data = [];
+                        particlesChart.data.datasets[2].data = [];
+                        particlesChart.update();
+                        
+                        aqiChart.data.labels = [noDataMsg];
+                        aqiChart.data.datasets[0].data = [];
+                        aqiChart.update();
                     }
                 } else {
                     console.log('No interval averages data available');
