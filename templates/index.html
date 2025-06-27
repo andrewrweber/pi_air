@@ -125,6 +125,11 @@
             
             // Add active class to clicked button
             event.target.classList.add('active');
+            
+            // If switching to air quality tab, update current readings immediately
+            if (tabName === 'air-quality') {
+                updateCurrentAirQuality();
+            }
         }
         
         // Initialize temperature chart
@@ -587,31 +592,8 @@
                 // Update memory usage
                 document.getElementById('memory-usage').textContent = `${data.memory_percent.toFixed(1)}%`;
                 
-                // Update air quality if available
-                if (data.air_quality) {
-                    document.getElementById('aqi-value').textContent = data.air_quality.aqi;
-                    document.getElementById('aqi-level').textContent = data.air_quality.aqi_level;
-                    document.getElementById('pm1-value').textContent = data.air_quality.pm1_0;
-                    document.getElementById('pm25-value').textContent = data.air_quality.pm2_5;
-                    document.getElementById('pm10-value').textContent = data.air_quality.pm10;
-                    
-                    // Set AQI color based on level
-                    const aqiElement = document.getElementById('aqi-value');
-                    const aqi = data.air_quality.aqi;
-                    if (aqi <= 50) {
-                        aqiElement.style.color = '#00e400';  // Good - Green
-                    } else if (aqi <= 100) {
-                        aqiElement.style.color = '#ffff00';  // Moderate - Yellow
-                    } else if (aqi <= 150) {
-                        aqiElement.style.color = '#ff7e00';  // Unhealthy for Sensitive - Orange
-                    } else if (aqi <= 200) {
-                        aqiElement.style.color = '#ff0000';  // Unhealthy - Red
-                    } else if (aqi <= 300) {
-                        aqiElement.style.color = '#8f3f97';  // Very Unhealthy - Purple
-                    } else {
-                        aqiElement.style.color = '#7e0023';  // Hazardous - Maroon
-                    }
-                }
+                // Skip air quality updates in fetchStats - handled separately for air quality tab
+                // Air quality will be updated by updateCurrentAirQuality() when that tab is active
                 
                 // Update last update time
                 document.getElementById('last-update').textContent = 
@@ -619,6 +601,58 @@
                 
             } catch (error) {
                 console.error('Error fetching stats:', error);
+            }
+        }
+        
+        // Function to update current air quality display with latest reading
+        async function updateCurrentAirQuality() {
+            try {
+                const response = await fetch('/api/air-quality-history');
+                const data = await response.json();
+                
+                // Update current reading display if we have recent data
+                if (data.interval_averages && data.interval_averages.length > 0) {
+                    const latest = data.interval_averages[data.interval_averages.length - 1];
+                    
+                    // Update current values
+                    document.getElementById('aqi-value').textContent = Math.round(latest.avg_aqi) || '--';
+                    document.getElementById('pm1-value').textContent = latest.avg_pm1_0?.toFixed(1) || '--';
+                    document.getElementById('pm25-value').textContent = latest.avg_pm2_5?.toFixed(1) || '--';
+                    document.getElementById('pm10-value').textContent = latest.avg_pm10?.toFixed(1) || '--';
+                    
+                    // Update AQI level and color
+                    const aqi = latest.avg_aqi;
+                    const aqiElement = document.getElementById('aqi-value');
+                    const aqiLevelElement = document.getElementById('aqi-level');
+                    
+                    if (aqi !== null && aqi !== undefined) {
+                        let level, color;
+                        if (aqi <= 50) {
+                            level = 'Good';
+                            color = '#00e400';
+                        } else if (aqi <= 100) {
+                            level = 'Moderate';
+                            color = '#ffff00';
+                        } else if (aqi <= 150) {
+                            level = 'Unhealthy for Sensitive';
+                            color = '#ff7e00';
+                        } else if (aqi <= 200) {
+                            level = 'Unhealthy';
+                            color = '#ff0000';
+                        } else if (aqi <= 300) {
+                            level = 'Very Unhealthy';
+                            color = '#8f3f97';
+                        } else {
+                            level = 'Hazardous';
+                            color = '#7e0023';
+                        }
+                        
+                        aqiElement.style.color = color;
+                        aqiLevelElement.textContent = level;
+                    }
+                }
+            } catch (error) {
+                console.error('Error updating current air quality:', error);
             }
         }
         
@@ -755,6 +789,14 @@
         
         // Update air quality history every 30 seconds
         setInterval(fetchAirQualityHistory, 30000);
+        
+        // Update current air quality readings every 10 seconds when air quality tab is active
+        setInterval(() => {
+            const airQualityTab = document.getElementById('air-quality-tab');
+            if (airQualityTab && airQualityTab.classList.contains('active')) {
+                updateCurrentAirQuality();
+            }
+        }, 10000);
         
         // Update full system info every 60 seconds (reduced frequency for Pi Zero 2 W)
         setInterval(fetchSystemInfo, 60000);
