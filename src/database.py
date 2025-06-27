@@ -369,21 +369,40 @@ def get_system_hourly_averages_24h() -> List[Dict]:
     """Get hourly averages for system metrics for the last 24 hours"""
     with get_db_connection() as conn:
         cutoff_time = datetime.datetime.now() - datetime.timedelta(hours=24)
+        
+        # First, check how many total records and how many have valid temperature
+        total_count = conn.execute("""
+            SELECT COUNT(*) FROM system_readings WHERE timestamp > ?
+        """, (cutoff_time,)).fetchone()[0]
+        
+        temp_count = conn.execute("""
+            SELECT COUNT(*) FROM system_readings WHERE timestamp > ? AND cpu_temp IS NOT NULL
+        """, (cutoff_time,)).fetchone()[0]
+        
+        logger.debug(f"System readings in last 24h: {total_count} total, {temp_count} with valid temperature")
+        
         rows = conn.execute("""
             SELECT 
                 strftime('%Y-%m-%d %H:00:00', timestamp) as hour,
-                AVG(cpu_temp) as avg_cpu_temp,
+                AVG(CASE WHEN cpu_temp IS NOT NULL THEN cpu_temp END) as avg_cpu_temp,
                 AVG(cpu_usage) as avg_cpu_usage,
                 AVG(memory_usage) as avg_memory_usage,
                 AVG(disk_usage) as avg_disk_usage,
-                COUNT(*) as reading_count
+                COUNT(*) as reading_count,
+                COUNT(CASE WHEN cpu_temp IS NOT NULL THEN 1 END) as temp_reading_count
             FROM system_readings
             WHERE timestamp > ?
             GROUP BY hour
             ORDER BY hour ASC
         """, (cutoff_time,)).fetchall()
         
-        return [dict(row) for row in rows]
+        result = [dict(row) for row in rows]
+        
+        if result:
+            recent_temps = [row['avg_cpu_temp'] for row in result[-3:] if row['avg_cpu_temp'] is not None]
+            logger.debug(f"Recent hourly temperature averages: {recent_temps}")
+        
+        return result
 
 def cleanup_old_system_readings():
     """Remove system readings older than 24 hours"""

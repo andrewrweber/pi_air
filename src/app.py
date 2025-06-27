@@ -60,24 +60,43 @@ def get_size(bytes: float, suffix: str = "B") -> str:
 def get_cpu_temperature() -> Optional[float]:
     """Get CPU temperature on Raspberry Pi"""
     # Skip temperature reading on non-Raspberry Pi systems
-    if platform.system() != 'Linux' or not os.path.exists('/usr/bin/vcgencmd'):
+    if platform.system() != 'Linux':
+        logger.debug("Not on Linux system, skipping temperature reading")
+        return None
+        
+    if not os.path.exists('/usr/bin/vcgencmd'):
+        logger.warning("vcgencmd not found at /usr/bin/vcgencmd")
         return None
         
     try:
-        # Use subprocess for better security than os.popen
+        # Use full path to vcgencmd for systemd service compatibility
         result = subprocess.run(
-            ['vcgencmd', 'measure_temp'], 
+            ['/usr/bin/vcgencmd', 'measure_temp'], 
             capture_output=True, 
             text=True, 
             timeout=2
         )
+        
         if result.returncode == 0:
             # Parse temperature from format: temp=45.6'C
             temp_str = result.stdout.strip()
+            logger.debug(f"vcgencmd output: '{temp_str}'")
             temp_value = temp_str.split('=')[1].split("'")[0]
             return float(temp_value)
-    except (subprocess.TimeoutExpired, subprocess.SubprocessError, ValueError, IndexError, FileNotFoundError):
-        pass
+        else:
+            logger.warning(f"vcgencmd failed with return code {result.returncode}: {result.stderr.strip()}")
+            
+    except subprocess.TimeoutExpired:
+        logger.warning("vcgencmd command timed out")
+    except subprocess.SubprocessError as e:
+        logger.warning(f"vcgencmd subprocess error: {e}")
+    except (ValueError, IndexError) as e:
+        logger.warning(f"Failed to parse temperature from vcgencmd output: {e}")
+    except FileNotFoundError:
+        logger.warning("vcgencmd command not found")
+    except Exception as e:
+        logger.warning(f"Unexpected error reading temperature: {e}")
+        
     return None
 
 def sample_temperature_and_system_stats():
@@ -111,19 +130,24 @@ def sample_temperature_and_system_stats():
             else:
                 logger.debug(f"Temperature collection failed at {timestamp}")
             
-            # Write to database every 30 seconds
+            # Write to database every 30 seconds (only if we have valid temperature)
             if current_time - last_db_write >= db_write_interval:
-                try:
-                    insert_system_reading(
-                        cpu_temp=temp,
-                        cpu_usage=cpu_usage,
-                        memory_usage=memory_usage,
-                        disk_usage=disk_usage
-                    )
-                    logger.debug(f"Inserted system reading: temp={temp}, CPU={cpu_usage}%, mem={memory_usage}%")
-                    last_db_write = current_time
-                except Exception as e:
-                    logger.error(f"Error writing system reading to database: {e}")
+                if temp is not None:
+                    try:
+                        insert_system_reading(
+                            cpu_temp=temp,
+                            cpu_usage=cpu_usage,
+                            memory_usage=memory_usage,
+                            disk_usage=disk_usage
+                        )
+                        logger.debug(f"Inserted system reading: temp={temp}°C, CPU={cpu_usage}%, mem={memory_usage}%")
+                        last_db_write = current_time
+                    except Exception as e:
+                        logger.error(f"Error writing system reading to database: {e}")
+                else:
+                    logger.warning(f"Skipping database write due to NULL temperature (CPU={cpu_usage}%, mem={memory_usage}%)")
+                    # Still update last_db_write to avoid spam, but try again sooner
+                    last_db_write = current_time - (db_write_interval // 2)
                     
         except Exception as e:
             logger.error(f"Error sampling system stats: {e}")
@@ -339,6 +363,13 @@ def system_history_api():
         
         # Get latest system reading
         latest_reading = get_latest_system_reading()
+        
+        # Log for debugging temperature issues
+        temp_count = sum(1 for row in hourly_data if row.get('avg_cpu_temp') is not None)
+        logger.debug(f"System history API: {len(hourly_data)} hourly records, {temp_count} with valid temperature")
+        
+        if hourly_data:
+            logger.debug(f"Latest hourly record: {hourly_data[-1]}")
         
         response_data = {
             'hourly_averages': hourly_data,
