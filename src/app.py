@@ -14,7 +14,7 @@ import logging
 from database import (get_latest_reading, get_hourly_averages_24h, get_15min_averages_24h, get_database_stats,
                      insert_system_reading, get_latest_system_reading, get_system_readings_last_24h, 
                      get_system_hourly_averages_24h, init_database, get_interval_averages, 
-                     get_temperature_history_optimized)
+                     get_temperature_history_optimized, get_readings_last_24h)
 
 app = Flask(__name__, 
             template_folder='../templates',
@@ -403,6 +403,29 @@ def air_quality_latest_api():
         return response
     except Exception as e:
         logger.error(f"Error in air_quality_latest_api: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/air-quality-worst-24h')
+def air_quality_worst_24h_api():
+    """API endpoint for the worst air quality reading in the last 24 hours"""
+    try:
+        # Get all readings from last 24 hours
+        readings_24h = get_readings_last_24h()
+        
+        if not readings_24h:
+            response_data = {'worst_reading': None}
+        else:
+            # Find the reading with the highest AQI (worst air quality)
+            worst_reading = max(readings_24h, key=lambda x: x['aqi'] if x['aqi'] is not None else 0)
+            response_data = {'worst_reading': worst_reading}
+        
+        response = jsonify(response_data)
+        # Add explicit CORS headers for development
+        if os.environ.get('FLASK_DEBUG', 'False').lower() == 'true':
+            response.headers['Access-Control-Allow-Origin'] = '*'
+        return response
+    except Exception as e:
+        logger.error(f"Error in air_quality_worst_24h_api: {e}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/air-quality-history')

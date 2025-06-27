@@ -325,31 +325,38 @@ h1 {
         margin-bottom: 8px;
     }
     
-    /* Enhanced Air Quality card for mobile */
-    #air-quality-card {
+    /* Enhanced Air Quality cards for mobile */
+    #air-quality-card, #worst-air-quality-card {
         padding: 25px;
         text-align: center;
     }
     
-    #air-quality-card h2 {
+    #air-quality-card h2, #worst-air-quality-card h2 {
         font-size: 1.4em;
         margin-bottom: 20px;
     }
     
-    #aqi-value {
+    #aqi-value, #worst-aqi-value {
         font-size: 3.5em !important;
         font-weight: bold;
         margin-bottom: 10px;
         line-height: 1;
     }
     
-    #aqi-level {
+    #aqi-level, #worst-aqi-level {
         font-size: 1.2em;
         font-weight: 600;
         margin-bottom: 20px;
         padding: 8px 16px;
         border-radius: 20px;
         display: inline-block;
+    }
+    
+    .worst-time {
+        font-size: 0.9em;
+        color: #666;
+        margin-bottom: 15px;
+        font-style: italic;
     }
     
     .air-quality-details {
