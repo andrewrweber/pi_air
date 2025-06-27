@@ -1,0 +1,22 @@
+[Unit]
+Description=Air Quality Monitor for PMS7003 Sensor
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=weber
+Group=weber
+WorkingDirectory=/home/weber/pi_air
+Environment=PATH=/home/weber/pi_air/venv/bin
+ExecStart=/home/weber/pi_air/venv/bin/python /home/weber/pi_air/src/air_quality_monitor.py
+Restart=always
+RestartSec=10
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=air-quality-monitor
+
+[Install]
+WantedBy=multi-user.target

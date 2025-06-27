@@ -1,0 +1,27 @@
+[Unit]
+Description=Pi Air Monitor Web Application
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=weber
+Group=weber
+WorkingDirectory=/home/weber/pi_air
+Environment=PATH=/home/weber/pi_air/venv/bin
+ExecStart=/home/weber/pi_air/venv/bin/python /home/weber/pi_air/src/app.py
+Restart=always
+RestartSec=10
+
+# Environment variables
+Environment=FLASK_HOST=0.0.0.0
+Environment=FLASK_PORT=5000
+Environment=FLASK_DEBUG=false
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=pimonitor
+
+[Install]
+WantedBy=multi-user.target
