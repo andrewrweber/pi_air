@@ -321,8 +321,17 @@
                 scales: {
                     x: {
                         title: {
-                            display: true,
-                            text: 'Time'
+                            display: window.innerWidth >= 768,
+                            text: 'Time',
+                            font: {
+                                size: window.innerWidth < 768 ? 10 : 12
+                            }
+                        },
+                        ticks: {
+                            maxTicksLimit: window.innerWidth < 768 ? 6 : 10,
+                            font: {
+                                size: window.innerWidth < 768 ? 9 : 11
+                            }
                         }
                     },
                     y: {
@@ -330,13 +339,20 @@
                         display: true,
                         position: 'left',
                         title: {
-                            display: true,
-                            text: 'Particulate Matter (μg/m³)'
+                            display: window.innerWidth >= 768,
+                            text: 'Particulate Matter (μg/m³)',
+                            font: {
+                                size: window.innerWidth < 768 ? 10 : 12
+                            }
                         },
                         min: 0,
                         suggestedMax: 50,
                         ticks: {
-                            beginAtZero: true
+                            beginAtZero: true,
+                            maxTicksLimit: window.innerWidth < 768 ? 6 : 8,
+                            font: {
+                                size: window.innerWidth < 768 ? 9 : 11
+                            }
                         }
                     }
                 },
@@ -346,10 +362,11 @@
                         position: 'top',
                         labels: {
                             usePointStyle: true,
-                            padding: 15,
+                            padding: window.innerWidth < 768 ? 8 : 15,
                             font: {
-                                size: window.innerWidth < 768 ? 11 : 12
-                            }
+                                size: window.innerWidth < 768 ? 10 : 12
+                            },
+                            boxWidth: window.innerWidth < 768 ? 8 : 12
                         }
                     }
                 },
@@ -393,8 +410,17 @@
                 scales: {
                     x: {
                         title: {
-                            display: true,
-                            text: 'Time'
+                            display: window.innerWidth >= 768,
+                            text: 'Time',
+                            font: {
+                                size: window.innerWidth < 768 ? 10 : 12
+                            }
+                        },
+                        ticks: {
+                            maxTicksLimit: window.innerWidth < 768 ? 6 : 10,
+                            font: {
+                                size: window.innerWidth < 768 ? 9 : 11
+                            }
                         }
                     },
                     y: {
@@ -402,24 +428,40 @@
                         display: true,
                         position: 'left',
                         title: {
-                            display: true,
-                            text: 'Air Quality Index'
+                            display: window.innerWidth >= 768,
+                            text: 'Air Quality Index',
+                            font: {
+                                size: window.innerWidth < 768 ? 10 : 12
+                            }
                         },
                         min: 0,
                         suggestedMax: 100,
                         ticks: {
                             beginAtZero: true,
                             stepSize: 50,
+                            maxTicksLimit: window.innerWidth < 768 ? 4 : 6,
+                            font: {
+                                size: window.innerWidth < 768 ? 9 : 11
+                            },
                             callback: function(value) {
-                                // Add AQI level labels
-                                if (value === 0) return '0';
-                                if (value === 50) return '50 (Good)';
-                                if (value === 100) return '100 (Moderate)';
-                                if (value === 150) return '150 (Unhealthy for Sensitive)';
-                                if (value === 200) return '200 (Unhealthy)';
-                                if (value === 300) return '300 (Very Unhealthy)';
-                                if (value === 500) return '500 (Hazardous)';
-                                return value;
+                                // Mobile-optimized AQI labels
+                                if (window.innerWidth < 768) {
+                                    if (value === 0) return '0';
+                                    if (value === 50) return '50';
+                                    if (value === 100) return '100';
+                                    if (value === 150) return '150';
+                                    return value;
+                                } else {
+                                    // Full labels for desktop
+                                    if (value === 0) return '0';
+                                    if (value === 50) return '50 (Good)';
+                                    if (value === 100) return '100 (Moderate)';
+                                    if (value === 150) return '150 (Unhealthy for Sensitive)';
+                                    if (value === 200) return '200 (Unhealthy)';
+                                    if (value === 300) return '300 (Very Unhealthy)';
+                                    if (value === 500) return '500 (Hazardous)';
+                                    return value;
+                                }
                             }
                         },
                         grid: {

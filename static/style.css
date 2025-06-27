@@ -375,22 +375,24 @@ h1 {
         color: #c51a4a;
     }
     
-    /* Enhanced chart controls for mobile */
+    /* Enhanced chart controls for mobile - horizontal compact layout */
     .chart-controls {
-        margin-top: 20px;
-        gap: 8px;
-        padding: 0 10px;
+        margin-top: 15px;
+        margin-bottom: 15px;
+        gap: 6px;
+        padding: 0 5px;
+        justify-content: center;
     }
     
     .chart-btn {
-        padding: 12px 20px !important;
-        font-size: 1em !important;
-        min-height: 48px;
-        min-width: 80px;
-        border-radius: 8px !important;
+        padding: 8px 16px !important;
+        font-size: 0.9em !important;
+        min-height: 40px;
+        min-width: 60px;
+        border-radius: 6px !important;
         font-weight: 600;
-        flex: 1;
-        max-width: 100px;
+        flex: 0 0 auto;
+        white-space: nowrap;
     }
     
     .chart-btn:active {
@@ -399,25 +401,28 @@ h1 {
     
     /* Better air quality section spacing */
     .air-quality-section {
-        padding: 20px !important;
-        margin-bottom: 20px;
+        padding: 15px !important;
+        margin-bottom: 15px;
     }
     
     .air-quality-section h2 {
-        font-size: 1.3em;
-        margin-bottom: 15px;
+        font-size: 1.1em;
+        margin-bottom: 8px;
         text-align: center;
+        line-height: 1.2;
+        padding: 0 5px;
+        word-wrap: break-word;
     }
     
-    /* Chart container improvements */
+    /* Chart container improvements - taller charts for better readability */
     .air-quality-section > div[style*="height:350px"] {
-        height: 280px !important;
-        margin-bottom: 15px;
+        height: 320px !important;
+        margin-bottom: 10px;
     }
     
     .air-quality-section > div[style*="height:300px"] {
-        height: 250px !important;
-        margin-bottom: 15px;
+        height: 280px !important;
+        margin-bottom: 10px;
     }
     
     /* Tab button improvements */
