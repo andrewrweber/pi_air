@@ -112,17 +112,32 @@ The application includes Raspberry Pi specific functionality:
 
 ### Raspberry Pi Setup
 
-The application is designed to run on Raspberry Pi with the user directory at `/home/weber/pi_air`.
+The application is designed to run on any Raspberry Pi with automatic user and path detection.
 
 **Prerequisites:**
 - Python 3.7+
 - PMS7003 air quality sensor (connected via serial)
 - Virtual environment setup
 
-**Installation paths:**
-- Project directory: `/home/weber/pi_air`
-- Virtual environment: `/home/weber/pi_air/venv`
-- Service user: `weber`
+### Automatic Installation
+
+The installation script automatically detects:
+- Current user (works with any username, not just 'pi' or 'weber')
+- Project directory location
+- User's primary group
+- Virtual environment path
+
+**Installation Process:**
+```bash
+# From the project directory
+sudo ./scripts/install_service.sh
+```
+
+The script will:
+1. Detect your current user and project paths
+2. Verify virtual environment exists
+3. Generate service files with correct paths
+4. Install and start systemd services
 
 ### Systemd Services
 
@@ -131,10 +146,11 @@ Two systemd services handle automatic startup:
 1. **pimonitor.service** - Flask web application
 2. **air-quality-monitor.service** - PMS7003 sensor data collection
 
-Service files are located in `/etc/systemd/system/` and configured to:
+Service files are dynamically generated and configured to:
 - Start automatically on boot
 - Restart on failure
-- Run as user `weber`
+- Run as the detected user
+- Use the detected project directory
 - Log to systemd journal
 
 ## Important Considerations

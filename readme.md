@@ -63,7 +63,7 @@ This script will:
 - Create a Python virtual environment
 - Install all dependencies
 - Set up the SQLite database
-- Create systemd services
+- Create systemd services with automatic user/path detection
 - Configure services to start on boot
 
 ### Manual Setup
@@ -86,11 +86,19 @@ pip install -r requirements.txt
 python -c "from src.database import init_db; init_db()"
 ```
 
-4. Install systemd services:
+4. Install systemd services (automatically detects user and paths):
 ```bash
 sudo chmod +x scripts/install_service.sh
 sudo ./scripts/install_service.sh
 ```
+
+The installation script automatically detects:
+- Your current username (works with any user, not just 'pi')
+- Project directory location
+- User's primary group
+- Virtual environment path
+
+This ensures the services work regardless of your username or installation directory.
 
 ## Usage
 
@@ -168,7 +176,7 @@ git push origin main
 
 3. Pull changes on your Pi:
 ```bash
-cd ~/pi_air
+cd /path/to/your/pi_air  # Or wherever you installed the project
 git pull origin main
 ```
 
@@ -182,7 +190,7 @@ sudo systemctl restart air-quality-monitor.service
 
 Run the PMS7003 sensor test:
 ```bash
-cd ~/pi_air
+cd /path/to/your/pi_air  # Navigate to your project directory
 source venv/bin/activate
 python tests/test_pms_simple.py
 ```
@@ -231,12 +239,12 @@ pi_air/
 │   └── index.html               # Web dashboard
 ├── static/
 │   └── style.css               # Dashboard styling
-├── services/
-│   ├── pimonitor.service       # System monitor service
-│   └── air-quality-monitor.service  # Air quality service
+├── systemd/
+│   ├── pimonitor.service       # System monitor service template
+│   └── air-quality-monitor.service  # Air quality service template
 ├── scripts/
 │   ├── setup_pi.sh            # Automated setup script
-│   └── install_service.sh     # Service installation
+│   └── install_service.sh     # User-agnostic service installation
 ├── tests/
 │   └── test_pms_simple.py     # Sensor tests
 ├── data/
