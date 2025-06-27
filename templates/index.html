@@ -799,10 +799,32 @@
             }
         }
         
+        // Helper function to filter data by time range
+        function filterDataByTimeRange(data, timeRange) {
+            const now = new Date();
+            let hoursAgo;
+            switch(timeRange) {
+                case '1h':
+                    hoursAgo = 1;
+                    break;
+                case '6h':
+                    hoursAgo = 6;
+                    break;
+                default:
+                    hoursAgo = 24;
+            }
+            const cutoffTime = new Date(now.getTime() - (hoursAgo * 60 * 60 * 1000));
+            
+            return data.filter(item => {
+                const itemTime = new Date(item.interval_time + 'Z');
+                return itemTime >= cutoffTime;
+            });
+        }
         
         // Function to update particles chart
         function updateParticlesChart(allData) {
-            const filteredData = allData; // Data is already filtered by time range and interval from API
+            // Filter data to only show points within the current particles time range
+            const filteredData = filterDataByTimeRange(allData, currentParticlesTimeRange);
             
             if (filteredData.length > 0) {
                 const labels = filteredData.map(item => {
@@ -849,7 +871,8 @@
         
         // Function to update AQI chart
         function updateAQIChart(allData) {
-            const filteredData = allData; // Data is already filtered by time range and interval from API
+            // Filter data to only show points within the current AQI time range
+            const filteredData = filterDataByTimeRange(allData, currentAQITimeRange);
             
             if (filteredData.length > 0) {
                 const labels = filteredData.map(item => {
