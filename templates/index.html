@@ -437,7 +437,11 @@
         let currentAQITimeRange = '24h';
         
         // Store the fetched data globally to avoid unnecessary API calls
-        let cachedAirQualityData = null;
+        let cachedAirQualityData = {
+            '1h': null,
+            '6h': null, 
+            '24h': null
+        };
         
         // Function to fetch and update temperature history
         async function fetchTemperatureHistory() {
@@ -729,102 +733,76 @@
             }
         }
         
-        // Function to fetch and update air quality history
-        async function fetchAirQualityHistory(updateBothCharts = true) {
+        // Function to fetch air quality data for a specific time range
+        async function fetchAirQualityData(range) {
+            if (cachedAirQualityData[range]) {
+                return cachedAirQualityData[range];
+            }
+            
             try {
-                // Fetch data for the longer time range to cover both charts
-                const maxRange = getMaxTimeRange();
-                const response = await fetch(`/api/air-quality-history?range=${maxRange}`);
+                const response = await fetch(`/api/air-quality-history?range=${range}`);
                 const data = await response.json();
                 
-                console.log('Air quality data received:', data);
-                console.log('First interval raw:', data.interval_averages[0]?.interval_time);
-                if (data.interval_averages[0]) {
-                    const rawDate = new Date(data.interval_averages[0].interval_time);
-                    const utcDate = new Date(data.interval_averages[0].interval_time + 'Z');
-                    console.log('Raw date parse:', rawDate.toISOString());
-                    console.log('UTC date parse:', utcDate.toISOString());
-                    console.log('PST converted:', utcDate.toLocaleString('en-US', { 
-                        timeZone: 'America/Los_Angeles',
-                        timeZoneName: 'short'
-                    }));
-                }
+                console.log(`Air quality data received for ${range}:`, data);
                 
                 if (data.interval_averages && data.interval_averages.length > 0) {
-                    // Cache the data
-                    cachedAirQualityData = data.interval_averages;
-                    
-                    // Update charts based on the flag
-                    if (updateBothCharts) {
-                        updateParticlesChart(data.interval_averages);
-                        updateAQIChart(data.interval_averages);
-                    }
-                    
-                    // Update database stats
-                    if (data.stats) {
-                        const statsHtml = `
-                            <p class="db-stat-item">
-                                Total air quality readings: ${data.stats.total_air_quality_readings || data.stats.total_readings || 0} | 
-                                Database size: ${data.stats.db_size_kb} KB
-                            </p>
-                        `;
-                        document.getElementById('db-stats').innerHTML = statsHtml;
-                    }
+                    // Cache the data for this specific range
+                    cachedAirQualityData[range] = data.interval_averages;
+                    return data.interval_averages;
                 } else {
-                    console.log('No interval averages data available');
-                    cachedAirQualityData = null;
-                    
-                    // Show empty charts with message
-                    particlesChart.data.labels = ['No data available'];
-                    particlesChart.data.datasets[0].data = [];
-                    particlesChart.data.datasets[1].data = [];
-                    particlesChart.data.datasets[2].data = [];
-                    particlesChart.update();
-                    
-                    aqiChart.data.labels = ['No data available'];
-                    aqiChart.data.datasets[0].data = [];
-                    aqiChart.update();
+                    console.log(`No interval averages data available for ${range}`);
+                    cachedAirQualityData[range] = [];
+                    return [];
+                }
+                
+            } catch (error) {
+                console.error(`Error fetching air quality history for ${range}:`, error);
+                return [];
+            }
+        }
+        
+        // Function to fetch and update air quality history (legacy function for initial load)
+        async function fetchAirQualityHistory() {
+            try {
+                // Fetch 24h data for initial load
+                const data = await fetchAirQualityData('24h');
+                
+                // Update both charts with 24h data initially
+                updateParticlesChart(data);
+                updateAQIChart(data);
+                
+                // Also fetch database stats
+                const response = await fetch('/api/air-quality-history?range=24h');
+                const fullData = await response.json();
+                if (fullData.stats) {
+                    const statsHtml = `
+                        <p class="db-stat-item">
+                            Total air quality readings: ${fullData.stats.total_air_quality_readings || fullData.stats.total_readings || 0} | 
+                            Database size: ${fullData.stats.db_size_kb} KB
+                        </p>
+                    `;
+                    document.getElementById('db-stats').innerHTML = statsHtml;
                 }
                 
             } catch (error) {
                 console.error('Error fetching air quality history:', error);
+                // Show empty charts with message
+                particlesChart.data.labels = ['No data available'];
+                particlesChart.data.datasets[0].data = [];
+                particlesChart.data.datasets[1].data = [];
+                particlesChart.data.datasets[2].data = [];
+                particlesChart.update();
+                
+                aqiChart.data.labels = ['No data available'];
+                aqiChart.data.datasets[0].data = [];
+                aqiChart.update();
             }
         }
         
-        // Helper function to get max time range needed for both charts
-        function getMaxTimeRange() {
-            // Return the larger time range to ensure we fetch enough data
-            const ranges = ['1h', '6h', '24h'];
-            const particlesIdx = ranges.indexOf(currentParticlesTimeRange);
-            const aqiIdx = ranges.indexOf(currentAQITimeRange);
-            return ranges[Math.max(particlesIdx, aqiIdx)];
-        }
-        
-        // Helper function to filter data by time range
-        function filterDataByTimeRange(data, timeRange) {
-            const now = new Date();
-            let hoursAgo;
-            switch(timeRange) {
-                case '1h':
-                    hoursAgo = 1;
-                    break;
-                case '6h':
-                    hoursAgo = 6;
-                    break;
-                default:
-                    hoursAgo = 24;
-            }
-            const cutoffTime = new Date(now.getTime() - (hoursAgo * 60 * 60 * 1000));
-            
-            return data.filter(item => {
-                const itemTime = new Date(item.interval_time + 'Z');
-                return itemTime >= cutoffTime;
-            });
-        }
         
         // Function to update particles chart
         function updateParticlesChart(allData) {
-            const filteredData = filterDataByTimeRange(allData, currentParticlesTimeRange);
+            const filteredData = allData; // Data is already filtered by time range and interval from API
             
             if (filteredData.length > 0) {
                 const labels = filteredData.map(item => {
@@ -871,7 +849,7 @@
         
         // Function to update AQI chart
         function updateAQIChart(allData) {
-            const filteredData = filterDataByTimeRange(allData, currentAQITimeRange);
+            const filteredData = allData; // Data is already filtered by time range and interval from API
             
             if (filteredData.length > 0) {
                 const labels = filteredData.map(item => {
@@ -925,7 +903,7 @@
         }
         
         // Function to switch particles chart time range
-        function showParticlesData(timeRange) {
+        async function showParticlesData(timeRange) {
             currentParticlesTimeRange = timeRange;
             
             // Update button states
@@ -954,27 +932,13 @@
             
             document.getElementById('particles-chart-title').textContent = `Particle Concentrations (${hoursText}, ${intervalText})`;
             
-            // Check if we need to fetch new data
-            const newMaxRange = getMaxTimeRange();
-            const needsNewData = !cachedAirQualityData || 
-                                (newMaxRange === '24h' && currentAQITimeRange !== '24h' && timeRange === '24h') ||
-                                (newMaxRange === '6h' && currentAQITimeRange === '1h' && timeRange === '6h');
-            
-            if (needsNewData) {
-                // Fetch new data but only update particles chart
-                fetchAirQualityHistory(false).then(() => {
-                    if (cachedAirQualityData) {
-                        updateParticlesChart(cachedAirQualityData);
-                    }
-                });
-            } else if (cachedAirQualityData) {
-                // Use cached data
-                updateParticlesChart(cachedAirQualityData);
-            }
+            // Fetch data for the specific time range with correct intervals
+            const data = await fetchAirQualityData(timeRange);
+            updateParticlesChart(data);
         }
         
         // Function to switch AQI chart time range
-        function showAQIData(timeRange) {
+        async function showAQIData(timeRange) {
             currentAQITimeRange = timeRange;
             
             // Update button states
@@ -1003,23 +967,9 @@
             
             document.getElementById('aqi-chart-title').textContent = `Air Quality Index (${hoursText}, ${intervalText})`;
             
-            // Check if we need to fetch new data
-            const newMaxRange = getMaxTimeRange();
-            const needsNewData = !cachedAirQualityData || 
-                                (newMaxRange === '24h' && currentParticlesTimeRange !== '24h' && timeRange === '24h') ||
-                                (newMaxRange === '6h' && currentParticlesTimeRange === '1h' && timeRange === '6h');
-            
-            if (needsNewData) {
-                // Fetch new data but only update AQI chart
-                fetchAirQualityHistory(false).then(() => {
-                    if (cachedAirQualityData) {
-                        updateAQIChart(cachedAirQualityData);
-                    }
-                });
-            } else if (cachedAirQualityData) {
-                // Use cached data
-                updateAQIChart(cachedAirQualityData);
-            }
+            // Fetch data for the specific time range with correct intervals
+            const data = await fetchAirQualityData(timeRange);
+            updateAQIChart(data);
         }
         
         // Initial load
