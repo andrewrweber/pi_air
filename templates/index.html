@@ -444,7 +444,14 @@
                     // Format timestamps for database data (longer timeframe)
                     const labels = data.database_history.map(item => {
                         const date = new Date(item.timestamp);
-                        return date.toLocaleString();
+                        return date.toLocaleString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: 'numeric',
+                            minute: '2-digit',
+                            timeZone: 'America/Los_Angeles',
+                            timeZoneName: 'short'
+                        });
                     });
                     const temperatures = data.database_history.map(item => item.cpu_temp).filter(temp => temp !== null);
                     
