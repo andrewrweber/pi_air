@@ -90,9 +90,14 @@
                 </div>
                 
                 <div class="air-quality-section" id="air-quality-history-section">
-                    <h2>Air Quality History (24 hours, 15-minute intervals)</h2>
-                    <div style="position: relative; height:400px; width:100%;">
-                        <canvas id="airQualityChart"></canvas>
+                    <h2>Particle Concentrations (24 hours, 15-minute intervals)</h2>
+                    <div style="position: relative; height:350px; width:100%;">
+                        <canvas id="particlesChart"></canvas>
+                    </div>
+                    
+                    <h2 style="margin-top: 2rem;">Air Quality Index (24 hours, 15-minute intervals)</h2>
+                    <div style="position: relative; height:300px; width:100%;">
+                        <canvas id="aqiChart"></canvas>
                     </div>
                     <div class="db-stats" id="db-stats"></div>
                 </div>
@@ -120,6 +125,11 @@
             
             // Add active class to clicked button
             event.target.classList.add('active');
+            
+            // If switching to air quality tab, update current readings immediately
+            if (tabName === 'air-quality') {
+                updateCurrentAirQuality();
+            }
         }
         
         // Initialize temperature chart
@@ -257,9 +267,9 @@
             }
         });
 
-        // Initialize air quality chart
-        const aqCtx = document.getElementById('airQualityChart').getContext('2d');
-        const airQualityChart = new Chart(aqCtx, {
+        // Initialize particles chart
+        const particlesCtx = document.getElementById('particlesChart').getContext('2d');
+        const particlesChart = new Chart(particlesCtx, {
             type: 'line',
             data: {
                 labels: [],
@@ -270,7 +280,6 @@
                         borderColor: 'rgb(255, 99, 132)',
                         backgroundColor: 'rgba(255, 99, 132, 0.1)',
                         tension: 0.1,
-                        yAxisID: 'y-pm',
                         spanGaps: true
                     },
                     {
@@ -279,17 +288,16 @@
                         borderColor: 'rgb(54, 162, 235)',
                         backgroundColor: 'rgba(54, 162, 235, 0.1)',
                         tension: 0.1,
-                        yAxisID: 'y-pm',
                         spanGaps: true
                     },
                     {
-                        label: 'AQI',
+                        label: 'PM1.0 (μg/m³)',
                         data: [],
-                        borderColor: 'rgb(75, 192, 192)',
-                        backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                        borderColor: 'rgb(255, 205, 86)',
+                        backgroundColor: 'rgba(255, 205, 86, 0.1)',
                         tension: 0.1,
-                        yAxisID: 'y-aqi',
-                        spanGaps: true
+                        spanGaps: true,
+                        hidden: true  // Hidden by default
                     }
                 ]
             },
@@ -307,7 +315,7 @@
                             text: 'Time'
                         }
                     },
-                    'y-pm': {
+                    y: {
                         type: 'linear',
                         display: true,
                         position: 'left',
@@ -320,29 +328,92 @@
                         ticks: {
                             beginAtZero: true
                         }
-                    },
-                    'y-aqi': {
-                        type: 'linear',
-                        display: true,
-                        position: 'right',
-                        title: {
-                            display: true,
-                            text: 'Air Quality Index'
-                        },
-                        min: 0,
-                        suggestedMax: 100,
-                        grid: {
-                            drawOnChartArea: false
-                        },
-                        ticks: {
-                            beginAtZero: true
-                        }
                     }
                 },
                 plugins: {
                     legend: {
                         display: true,
                         position: 'top'
+                    }
+                }
+            }
+        });
+
+        // Initialize AQI chart
+        const aqiCtx = document.getElementById('aqiChart').getContext('2d');
+        const aqiChart = new Chart(aqiCtx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [
+                    {
+                        label: 'Air Quality Index',
+                        data: [],
+                        borderColor: 'rgb(75, 192, 192)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                        tension: 0.1,
+                        spanGaps: true,
+                        borderWidth: 3,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Time'
+                        }
+                    },
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: {
+                            display: true,
+                            text: 'Air Quality Index'
+                        },
+                        min: 0,
+                        suggestedMax: 100,
+                        ticks: {
+                            beginAtZero: true,
+                            stepSize: 50,
+                            callback: function(value) {
+                                // Add AQI level labels
+                                if (value === 0) return '0';
+                                if (value === 50) return '50 (Good)';
+                                if (value === 100) return '100 (Moderate)';
+                                if (value === 150) return '150 (Unhealthy for Sensitive)';
+                                if (value === 200) return '200 (Unhealthy)';
+                                if (value === 300) return '300 (Very Unhealthy)';
+                                if (value === 500) return '500 (Hazardous)';
+                                return value;
+                            }
+                        },
+                        grid: {
+                            color: function(context) {
+                                const value = context.tick.value;
+                                if (value === 50) return 'rgba(0, 228, 0, 0.2)';
+                                if (value === 100) return 'rgba(255, 255, 0, 0.2)';
+                                if (value === 150) return 'rgba(255, 126, 0, 0.2)';
+                                if (value === 200) return 'rgba(255, 0, 0, 0.2)';
+                                if (value === 300) return 'rgba(143, 63, 151, 0.2)';
+                                return 'rgba(0, 0, 0, 0.1)';
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false  // Single dataset, no need for legend
                     }
                 }
             }
@@ -521,31 +592,8 @@
                 // Update memory usage
                 document.getElementById('memory-usage').textContent = `${data.memory_percent.toFixed(1)}%`;
                 
-                // Update air quality if available
-                if (data.air_quality) {
-                    document.getElementById('aqi-value').textContent = data.air_quality.aqi;
-                    document.getElementById('aqi-level').textContent = data.air_quality.aqi_level;
-                    document.getElementById('pm1-value').textContent = data.air_quality.pm1_0;
-                    document.getElementById('pm25-value').textContent = data.air_quality.pm2_5;
-                    document.getElementById('pm10-value').textContent = data.air_quality.pm10;
-                    
-                    // Set AQI color based on level
-                    const aqiElement = document.getElementById('aqi-value');
-                    const aqi = data.air_quality.aqi;
-                    if (aqi <= 50) {
-                        aqiElement.style.color = '#00e400';  // Good - Green
-                    } else if (aqi <= 100) {
-                        aqiElement.style.color = '#ffff00';  // Moderate - Yellow
-                    } else if (aqi <= 150) {
-                        aqiElement.style.color = '#ff7e00';  // Unhealthy for Sensitive - Orange
-                    } else if (aqi <= 200) {
-                        aqiElement.style.color = '#ff0000';  // Unhealthy - Red
-                    } else if (aqi <= 300) {
-                        aqiElement.style.color = '#8f3f97';  // Very Unhealthy - Purple
-                    } else {
-                        aqiElement.style.color = '#7e0023';  // Hazardous - Maroon
-                    }
-                }
+                // Skip air quality updates in fetchStats - handled separately for air quality tab
+                // Air quality will be updated by updateCurrentAirQuality() when that tab is active
                 
                 // Update last update time
                 document.getElementById('last-update').textContent = 
@@ -553,6 +601,97 @@
                 
             } catch (error) {
                 console.error('Error fetching stats:', error);
+            }
+        }
+        
+        // Function to update current air quality display with latest reading
+        async function updateCurrentAirQuality() {
+            try {
+                const response = await fetch('/api/air-quality-latest');
+                const data = await response.json();
+                
+                console.log('Latest air quality reading from API:', data);
+                
+                // Update current reading display with actual latest sensor reading
+                if (data.latest_reading) {
+                    const reading = data.latest_reading;
+                    console.log('Using latest sensor reading:', reading);
+                    
+                    // Update current values - these are actual sensor readings, not averages
+                    document.getElementById('aqi-value').textContent = reading.aqi || '--';
+                    document.getElementById('pm1-value').textContent = (reading.pm1_0 !== null && reading.pm1_0 !== undefined) ? reading.pm1_0.toFixed(1) : '--';
+                    document.getElementById('pm25-value').textContent = (reading.pm2_5 !== null && reading.pm2_5 !== undefined) ? reading.pm2_5.toFixed(1) : '--';
+                    document.getElementById('pm10-value').textContent = (reading.pm10 !== null && reading.pm10 !== undefined) ? reading.pm10.toFixed(1) : '--';
+                    
+                    // Update AQI level and color
+                    const aqi = reading.aqi;
+                    const aqiElement = document.getElementById('aqi-value');
+                    const aqiLevelElement = document.getElementById('aqi-level');
+                    
+                    if (aqi !== null && aqi !== undefined) {
+                        let level, color;
+                        if (aqi <= 50) {
+                            level = 'Good';
+                            color = '#00e400';
+                        } else if (aqi <= 100) {
+                            level = 'Moderate';
+                            color = '#ffff00';
+                        } else if (aqi <= 150) {
+                            level = 'Unhealthy for Sensitive';
+                            color = '#ff7e00';
+                        } else if (aqi <= 200) {
+                            level = 'Unhealthy';
+                            color = '#ff0000';
+                        } else if (aqi <= 300) {
+                            level = 'Very Unhealthy';
+                            color = '#8f3f97';
+                        } else {
+                            level = 'Hazardous';
+                            color = '#7e0023';
+                        }
+                        
+                        aqiElement.style.color = color;
+                        aqiLevelElement.textContent = level;
+                    } else {
+                        aqiLevelElement.textContent = '--';
+                    }
+                } else {
+                    console.log('No latest reading available, trying stats API fallback');
+                    // Fallback to stats API if no latest reading available
+                    try {
+                        const statsResponse = await fetch('/api/stats');
+                        const statsData = await statsResponse.json();
+                        
+                        if (statsData.air_quality) {
+                            document.getElementById('aqi-value').textContent = statsData.air_quality.aqi;
+                            document.getElementById('aqi-level').textContent = statsData.air_quality.aqi_level;
+                            document.getElementById('pm1-value').textContent = statsData.air_quality.pm1_0;
+                            document.getElementById('pm25-value').textContent = statsData.air_quality.pm2_5;
+                            document.getElementById('pm10-value').textContent = statsData.air_quality.pm10;
+                            
+                            // Set AQI color
+                            const aqiElement = document.getElementById('aqi-value');
+                            const aqi = statsData.air_quality.aqi;
+                            if (aqi <= 50) {
+                                aqiElement.style.color = '#00e400';
+                            } else if (aqi <= 100) {
+                                aqiElement.style.color = '#ffff00';
+                            } else if (aqi <= 150) {
+                                aqiElement.style.color = '#ff7e00';
+                            } else if (aqi <= 200) {
+                                aqiElement.style.color = '#ff0000';
+                            } else if (aqi <= 300) {
+                                aqiElement.style.color = '#8f3f97';
+                            } else {
+                                aqiElement.style.color = '#7e0023';
+                            }
+                        }
+                    } catch (statsError) {
+                        console.error('Error fetching stats API fallback:', statsError);
+                    }
+                }
+            } catch (error) {
+                console.error('Error updating current air quality:', error);
             }
         }
         
@@ -591,43 +730,62 @@
                         });
                     });
                     
+                    const pm1Data = data.interval_averages.map(item => item.avg_pm1_0);
                     const pm25Data = data.interval_averages.map(item => item.avg_pm2_5);
                     const pm10Data = data.interval_averages.map(item => item.avg_pm10);
                     const aqiData = data.interval_averages.map(item => item.avg_aqi);
                     
-                    console.log('Chart data arrays:', { pm25Data, pm10Data, aqiData });
+                    console.log('Chart data arrays:', { pm1Data, pm25Data, pm10Data, aqiData });
                     console.log('Non-null PM2.5 values:', pm25Data.filter(v => v !== null));
                     
                     // Calculate dynamic max values for better scaling
                     const maxPM = Math.max(
+                        ...pm1Data.filter(v => v !== null),
                         ...pm25Data.filter(v => v !== null),
                         ...pm10Data.filter(v => v !== null),
                         10  // minimum
                     );
                     const maxAQI = Math.max(...aqiData.filter(v => v !== null), 50);
                     
-                    // Update chart scales
-                    airQualityChart.options.scales['y-pm'].suggestedMax = Math.ceil(maxPM * 1.2);
-                    airQualityChart.options.scales['y-aqi'].suggestedMax = Math.ceil(maxAQI * 1.2);
+                    // Update particles chart
+                    particlesChart.options.scales.y.suggestedMax = Math.ceil(maxPM * 1.2);
+                    particlesChart.data.labels = labels;
+                    particlesChart.data.datasets[0].data = pm25Data;
+                    particlesChart.data.datasets[1].data = pm10Data;
+                    particlesChart.data.datasets[2].data = pm1Data;
+                    particlesChart.update();
                     
-                    // Update chart data
-                    airQualityChart.data.labels = labels;
-                    airQualityChart.data.datasets[0].data = pm25Data;
-                    airQualityChart.data.datasets[1].data = pm10Data;
-                    airQualityChart.data.datasets[2].data = aqiData;
+                    // Update AQI chart with dynamic scaling
+                    aqiChart.options.scales.y.suggestedMax = Math.ceil(maxAQI * 1.2);
+                    // Ensure we show AQI scale up to at least 200 to show color bands
+                    if (aqiChart.options.scales.y.suggestedMax < 200) {
+                        aqiChart.options.scales.y.suggestedMax = 200;
+                    }
+                    aqiChart.data.labels = labels;
+                    aqiChart.data.datasets[0].data = aqiData;
                     
-                    // Set spanGaps to connect points across null values
-                    airQualityChart.data.datasets.forEach(dataset => {
-                        dataset.spanGaps = true;
-                    });
+                    // Color the AQI line based on the current value
+                    const currentAQI = aqiData[aqiData.length - 1];
+                    if (currentAQI !== null && currentAQI !== undefined) {
+                        let lineColor;
+                        if (currentAQI <= 50) lineColor = 'rgb(0, 228, 0)';
+                        else if (currentAQI <= 100) lineColor = 'rgb(255, 255, 0)';
+                        else if (currentAQI <= 150) lineColor = 'rgb(255, 126, 0)';
+                        else if (currentAQI <= 200) lineColor = 'rgb(255, 0, 0)';
+                        else if (currentAQI <= 300) lineColor = 'rgb(143, 63, 151)';
+                        else lineColor = 'rgb(126, 0, 35)';
+                        
+                        aqiChart.data.datasets[0].borderColor = lineColor;
+                        aqiChart.data.datasets[0].backgroundColor = lineColor.replace('rgb', 'rgba').replace(')', ', 0.1)');
+                    }
                     
-                    airQualityChart.update();
+                    aqiChart.update();
                     
                     // Update database stats
                     if (data.stats) {
                         const statsHtml = `
                             <p class="db-stat-item">
-                                Total readings: ${data.stats.total_readings} | 
+                                Total air quality readings: ${data.stats.total_air_quality_readings || data.stats.total_readings || 0} | 
                                 Database size: ${data.stats.db_size_kb} KB
                             </p>
                         `;
@@ -635,12 +793,16 @@
                     }
                 } else {
                     console.log('No interval averages data available');
-                    // Show empty chart with message
-                    airQualityChart.data.labels = ['No data available'];
-                    airQualityChart.data.datasets[0].data = [];
-                    airQualityChart.data.datasets[1].data = [];
-                    airQualityChart.data.datasets[2].data = [];
-                    airQualityChart.update();
+                    // Show empty charts with message
+                    particlesChart.data.labels = ['No data available'];
+                    particlesChart.data.datasets[0].data = [];
+                    particlesChart.data.datasets[1].data = [];
+                    particlesChart.data.datasets[2].data = [];
+                    particlesChart.update();
+                    
+                    aqiChart.data.labels = ['No data available'];
+                    aqiChart.data.datasets[0].data = [];
+                    aqiChart.update();
                 }
                 
             } catch (error) {
@@ -666,6 +828,14 @@
         
         // Update air quality history every 30 seconds
         setInterval(fetchAirQualityHistory, 30000);
+        
+        // Update current air quality readings every 10 seconds when air quality tab is active
+        setInterval(() => {
+            const airQualityTab = document.getElementById('air-quality-tab');
+            if (airQualityTab && airQualityTab.classList.contains('active')) {
+                updateCurrentAirQuality();
+            }
+        }, 10000);
         
         // Update full system info every 60 seconds (reduced frequency for Pi Zero 2 W)
         setInterval(fetchSystemInfo, 60000);

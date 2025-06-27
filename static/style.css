@@ -171,6 +171,16 @@ h1 {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
+.air-quality-section h2 {
+    color: #c51a4a;
+    margin-bottom: 1rem;
+    font-size: 1.3em;
+}
+
+.air-quality-section > div[style*="height"] {
+    margin-bottom: 1.5rem;
+}
+
 .db-stats {
     margin-top: 10px;
     text-align: center;
