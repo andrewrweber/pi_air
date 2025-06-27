@@ -130,22 +130,24 @@ def sample_temperature_and_system_stats():
             else:
                 logger.debug(f"Temperature collection failed at {timestamp}")
             
-            # Write to database every 30 seconds
+            # Write to database every 30 seconds (only if we have valid temperature)
             if current_time - last_db_write >= db_write_interval:
-                try:
-                    insert_system_reading(
-                        cpu_temp=temp,
-                        cpu_usage=cpu_usage,
-                        memory_usage=memory_usage,
-                        disk_usage=disk_usage
-                    )
-                    if temp is not None:
+                if temp is not None:
+                    try:
+                        insert_system_reading(
+                            cpu_temp=temp,
+                            cpu_usage=cpu_usage,
+                            memory_usage=memory_usage,
+                            disk_usage=disk_usage
+                        )
                         logger.debug(f"Inserted system reading: temp={temp}°C, CPU={cpu_usage}%, mem={memory_usage}%")
-                    else:
-                        logger.warning(f"Inserted system reading with NULL temperature: CPU={cpu_usage}%, mem={memory_usage}%")
-                    last_db_write = current_time
-                except Exception as e:
-                    logger.error(f"Error writing system reading to database: {e}")
+                        last_db_write = current_time
+                    except Exception as e:
+                        logger.error(f"Error writing system reading to database: {e}")
+                else:
+                    logger.warning(f"Skipping database write due to NULL temperature (CPU={cpu_usage}%, mem={memory_usage}%)")
+                    # Still update last_db_write to avoid spam, but try again sooner
+                    last_db_write = current_time - (db_write_interval // 2)
                     
         except Exception as e:
             logger.error(f"Error sampling system stats: {e}")
