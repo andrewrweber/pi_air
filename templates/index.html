@@ -485,11 +485,9 @@
                 if (data.hourly_averages && data.hourly_averages.length > 0) {
                     // Format timestamps for hourly data
                     const labels = data.hourly_averages.map(item => {
-                        // Ensure UTC parsing by appending 'Z' if not present
-                        const dateStr = item.hour.includes('Z') || item.hour.includes('+') || item.hour.includes('-') 
-                            ? item.hour 
-                            : item.hour + 'Z';
-                        const date = new Date(dateStr);
+                        // SQLite CURRENT_TIMESTAMP stores in UTC, but strftime returns local format without timezone
+                        // We need to treat these as UTC timestamps by appending 'Z'
+                        const date = new Date(item.hour + 'Z');
                         return date.toLocaleString('en-US', { 
                             month: 'short', 
                             day: 'numeric', 
