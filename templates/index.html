@@ -436,6 +436,9 @@
         let currentParticlesTimeRange = '24h';
         let currentAQITimeRange = '24h';
         
+        // Store the fetched data globally to avoid unnecessary API calls
+        let cachedAirQualityData = null;
+        
         // Function to fetch and update temperature history
         async function fetchTemperatureHistory() {
             try {
@@ -727,7 +730,7 @@
         }
         
         // Function to fetch and update air quality history
-        async function fetchAirQualityHistory() {
+        async function fetchAirQualityHistory(updateBothCharts = true) {
             try {
                 // Fetch data for the longer time range to cover both charts
                 const maxRange = getMaxTimeRange();
@@ -748,9 +751,14 @@
                 }
                 
                 if (data.interval_averages && data.interval_averages.length > 0) {
-                    // Update both charts with their respective time ranges
-                    updateParticlesChart(data.interval_averages);
-                    updateAQIChart(data.interval_averages);
+                    // Cache the data
+                    cachedAirQualityData = data.interval_averages;
+                    
+                    // Update charts based on the flag
+                    if (updateBothCharts) {
+                        updateParticlesChart(data.interval_averages);
+                        updateAQIChart(data.interval_averages);
+                    }
                     
                     // Update database stats
                     if (data.stats) {
@@ -764,6 +772,8 @@
                     }
                 } else {
                     console.log('No interval averages data available');
+                    cachedAirQualityData = null;
+                    
                     // Show empty charts with message
                     particlesChart.data.labels = ['No data available'];
                     particlesChart.data.datasets[0].data = [];
@@ -944,8 +954,23 @@
             
             document.getElementById('particles-chart-title').textContent = `Particle Concentrations (${hoursText}, ${intervalText})`;
             
-            // Fetch new data if needed
-            fetchAirQualityHistory();
+            // Check if we need to fetch new data
+            const newMaxRange = getMaxTimeRange();
+            const needsNewData = !cachedAirQualityData || 
+                                (newMaxRange === '24h' && currentAQITimeRange !== '24h' && timeRange === '24h') ||
+                                (newMaxRange === '6h' && currentAQITimeRange === '1h' && timeRange === '6h');
+            
+            if (needsNewData) {
+                // Fetch new data but only update particles chart
+                fetchAirQualityHistory(false).then(() => {
+                    if (cachedAirQualityData) {
+                        updateParticlesChart(cachedAirQualityData);
+                    }
+                });
+            } else if (cachedAirQualityData) {
+                // Use cached data
+                updateParticlesChart(cachedAirQualityData);
+            }
         }
         
         // Function to switch AQI chart time range
@@ -978,8 +1003,23 @@
             
             document.getElementById('aqi-chart-title').textContent = `Air Quality Index (${hoursText}, ${intervalText})`;
             
-            // Fetch new data if needed
-            fetchAirQualityHistory();
+            // Check if we need to fetch new data
+            const newMaxRange = getMaxTimeRange();
+            const needsNewData = !cachedAirQualityData || 
+                                (newMaxRange === '24h' && currentParticlesTimeRange !== '24h' && timeRange === '24h') ||
+                                (newMaxRange === '6h' && currentParticlesTimeRange === '1h' && timeRange === '6h');
+            
+            if (needsNewData) {
+                // Fetch new data but only update AQI chart
+                fetchAirQualityHistory(false).then(() => {
+                    if (cachedAirQualityData) {
+                        updateAQIChart(cachedAirQualityData);
+                    }
+                });
+            } else if (cachedAirQualityData) {
+                // Use cached data
+                updateAQIChart(cachedAirQualityData);
+            }
         }
         
         // Initial load
