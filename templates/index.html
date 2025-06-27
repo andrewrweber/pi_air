@@ -343,7 +343,21 @@
                 plugins: {
                     legend: {
                         display: true,
-                        position: 'top'
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 15,
+                            font: {
+                                size: window.innerWidth < 768 ? 11 : 12
+                            }
+                        }
+                    }
+                },
+                // Mobile-optimized settings
+                elements: {
+                    point: {
+                        radius: window.innerWidth < 768 ? 2 : 3,
+                        hoverRadius: window.innerWidth < 768 ? 4 : 6
                     }
                 }
             }
@@ -425,6 +439,13 @@
                     legend: {
                         display: false  // Single dataset, no need for legend
                     }
+                },
+                // Mobile-optimized settings
+                elements: {
+                    point: {
+                        radius: window.innerWidth < 768 ? 2 : 3,
+                        hoverRadius: window.innerWidth < 768 ? 4 : 6
+                    }
                 }
             }
         });
@@ -442,6 +463,56 @@
             '6h': null, 
             '24h': null
         };
+        
+        // Mobile touch handling for better user experience
+        let touchStartX = 0;
+        let touchEndX = 0;
+        
+        function handleSwipeGesture(chartType) {
+            const swipeThreshold = 50; // Minimum distance for a swipe
+            const swipeDistance = touchEndX - touchStartX;
+            
+            if (Math.abs(swipeDistance) < swipeThreshold) return;
+            
+            const timeRanges = ['1h', '6h', '24h'];
+            const currentRange = chartType === 'particles' ? currentParticlesTimeRange : currentAQITimeRange;
+            const currentIndex = timeRanges.indexOf(currentRange);
+            
+            let newIndex;
+            if (swipeDistance > 0) {
+                // Swipe right - go to previous time range
+                newIndex = currentIndex > 0 ? currentIndex - 1 : timeRanges.length - 1;
+            } else {
+                // Swipe left - go to next time range  
+                newIndex = currentIndex < timeRanges.length - 1 ? currentIndex + 1 : 0;
+            }
+            
+            const newRange = timeRanges[newIndex];
+            if (chartType === 'particles') {
+                showParticlesData(newRange);
+            } else {
+                showAQIData(newRange);
+            }
+        }
+        
+        // Add touch event listeners for mobile swipe navigation
+        function setupMobileSwipeNavigation() {
+            const particlesChart = document.getElementById('particlesChart');
+            const aqiChart = document.getElementById('aqiChart');
+            
+            [particlesChart, aqiChart].forEach((chart, index) => {
+                const chartType = index === 0 ? 'particles' : 'aqi';
+                
+                chart.addEventListener('touchstart', (e) => {
+                    touchStartX = e.changedTouches[0].screenX;
+                }, { passive: true });
+                
+                chart.addEventListener('touchend', (e) => {
+                    touchEndX = e.changedTouches[0].screenX;
+                    handleSwipeGesture(chartType);
+                }, { passive: true });
+            });
+        }
         
         // Function to fetch and update temperature history
         async function fetchTemperatureHistory() {
@@ -667,28 +738,31 @@
                     const aqiLevelElement = document.getElementById('aqi-level');
                     
                     if (aqi !== null && aqi !== undefined) {
-                        let level, color;
+                        let level, cssClass;
                         if (aqi <= 50) {
                             level = 'Good';
-                            color = '#00e400';
+                            cssClass = 'aqi-good';
                         } else if (aqi <= 100) {
                             level = 'Moderate';
-                            color = '#ffff00';
+                            cssClass = 'aqi-moderate';
                         } else if (aqi <= 150) {
                             level = 'Unhealthy for Sensitive';
-                            color = '#ff7e00';
+                            cssClass = 'aqi-unhealthy-sensitive';
                         } else if (aqi <= 200) {
                             level = 'Unhealthy';
-                            color = '#ff0000';
+                            cssClass = 'aqi-unhealthy';
                         } else if (aqi <= 300) {
                             level = 'Very Unhealthy';
-                            color = '#8f3f97';
+                            cssClass = 'aqi-very-unhealthy';
                         } else {
                             level = 'Hazardous';
-                            color = '#7e0023';
+                            cssClass = 'aqi-hazardous';
                         }
                         
-                        aqiElement.style.color = color;
+                        // Remove any existing AQI classes
+                        aqiLevelElement.className = aqiLevelElement.className.replace(/aqi-\w+/g, '');
+                        // Add the new AQI class
+                        aqiLevelElement.classList.add(cssClass);
                         aqiLevelElement.textContent = level;
                     } else {
                         aqiLevelElement.textContent = '--';
@@ -1002,6 +1076,7 @@
         fetchSystemHistory();
         fetchAirQualityHistory();
         updateCurrentAirQuality(); // Load air quality immediately since it's the default tab
+        setupMobileSwipeNavigation(); // Initialize mobile swipe gestures
         
         // Update stats every 5 seconds (reduced frequency for Pi Zero 2 W)
         setInterval(fetchStats, 5000);

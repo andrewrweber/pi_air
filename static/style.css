@@ -177,6 +177,62 @@ h1 {
     font-size: 1.3em;
 }
 
+/* AQI Level Color Coding */
+.aqi-good {
+    background-color: #00e400 !important;
+    color: white !important;
+}
+
+.aqi-moderate {
+    background-color: #ffff00 !important;
+    color: black !important;
+}
+
+.aqi-unhealthy-sensitive {
+    background-color: #ff7e00 !important;
+    color: white !important;
+}
+
+.aqi-unhealthy {
+    background-color: #ff0000 !important;
+    color: white !important;
+}
+
+.aqi-very-unhealthy {
+    background-color: #8f3f97 !important;
+    color: white !important;
+}
+
+.aqi-hazardous {
+    background-color: #7e0023 !important;
+    color: white !important;
+}
+
+/* Enhanced air quality details */
+.air-quality-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.air-metric {
+    background: rgba(255, 255, 255, 0.8);
+    padding: 10px;
+    border-radius: 8px;
+    text-align: center;
+    font-weight: 500;
+    border: 1px solid rgba(197, 26, 74, 0.1);
+}
+
+.air-metric span {
+    display: block;
+    font-size: 1.3em;
+    font-weight: bold;
+    color: #c51a4a;
+    margin-top: 5px;
+}
+
 .air-quality-section > div[style*="height"] {
     margin-bottom: 1.5rem;
 }
@@ -251,19 +307,130 @@ h1 {
 
 @media (max-width: 768px) {
     .container {
-        padding: 10px;
+        padding: 15px;
     }
     
     h1 {
         font-size: 2em;
+        margin-bottom: 20px;
     }
     
     .stats-grid {
         grid-template-columns: 1fr;
+        gap: 15px;
     }
     
     .stat-value {
-        font-size: 2em;
+        font-size: 2.5em;
+        margin-bottom: 8px;
+    }
+    
+    /* Enhanced Air Quality card for mobile */
+    #air-quality-card {
+        padding: 25px;
+        text-align: center;
+    }
+    
+    #air-quality-card h2 {
+        font-size: 1.4em;
+        margin-bottom: 20px;
+    }
+    
+    #aqi-value {
+        font-size: 3.5em !important;
+        font-weight: bold;
+        margin-bottom: 10px;
+        line-height: 1;
+    }
+    
+    #aqi-level {
+        font-size: 1.2em;
+        font-weight: 600;
+        margin-bottom: 20px;
+        padding: 8px 16px;
+        border-radius: 20px;
+        display: inline-block;
+    }
+    
+    .air-quality-details {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-top: 20px;
+    }
+    
+    .air-metric {
+        font-size: 1.1em;
+        padding: 12px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-weight: 500;
+    }
+    
+    .air-metric span {
+        font-weight: bold;
+        color: #c51a4a;
+    }
+    
+    /* Enhanced chart controls for mobile */
+    .chart-controls {
+        margin-top: 20px;
+        gap: 8px;
+        padding: 0 10px;
+    }
+    
+    .chart-btn {
+        padding: 12px 20px !important;
+        font-size: 1em !important;
+        min-height: 48px;
+        min-width: 80px;
+        border-radius: 8px !important;
+        font-weight: 600;
+        flex: 1;
+        max-width: 100px;
+    }
+    
+    .chart-btn:active {
+        transform: scale(0.95);
+    }
+    
+    /* Better air quality section spacing */
+    .air-quality-section {
+        padding: 20px !important;
+        margin-bottom: 20px;
+    }
+    
+    .air-quality-section h2 {
+        font-size: 1.3em;
+        margin-bottom: 15px;
+        text-align: center;
+    }
+    
+    /* Chart container improvements */
+    .air-quality-section > div[style*="height:350px"] {
+        height: 280px !important;
+        margin-bottom: 15px;
+    }
+    
+    .air-quality-section > div[style*="height:300px"] {
+        height: 250px !important;
+        margin-bottom: 15px;
+    }
+    
+    /* Tab button improvements */
+    .tab-button {
+        padding: 15px 25px !important;
+        font-size: 1.1em !important;
+        min-height: 50px;
+        border-radius: 10px !important;
+    }
+    
+    .tab-buttons {
+        gap: 10px;
+        margin-bottom: 25px;
     }
 }
 
