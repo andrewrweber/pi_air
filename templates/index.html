@@ -789,7 +789,10 @@
         // Helper function to format timestamp for display in Pacific Time
         function formatTimestamp(timestamp) {
             // Parse the UTC timestamp from the database
-            const utcDate = new Date(timestamp);
+            // SQLite CURRENT_TIMESTAMP is in UTC format: 'YYYY-MM-DD HH:MM:SS'
+            // Add 'Z' to explicitly indicate UTC timezone for proper parsing
+            const utcTimestamp = timestamp.includes('Z') ? timestamp : timestamp + 'Z';
+            const utcDate = new Date(utcTimestamp);
             
             // Format directly to Pacific Time using the timezone option
             const formattedDate = utcDate.toLocaleDateString('en-US', {
