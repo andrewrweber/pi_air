@@ -77,6 +77,21 @@ class TestBackgroundThreads:
         
         mock_time.side_effect = debug_time
         
+        # Add debug wrapper to insert function to see if it's ever called
+        original_insert = mock_insert
+        def debug_insert(*args, **kwargs):
+            print(f"DEBUG: insert_system_reading called with args={args}, kwargs={kwargs}")
+            return original_insert(*args, **kwargs)
+        mock_insert.side_effect = debug_insert
+        
+        # Add debug wrapper to get_cpu_temperature to see what temp values we get
+        original_get_temp = mock_get_temp
+        def debug_get_temp(*args, **kwargs):
+            result = original_get_temp(*args, **kwargs)
+            print(f"DEBUG: get_cpu_temperature() returning {result}")
+            return result
+        mock_get_temp.side_effect = debug_get_temp
+        
         # Clear temperature history for clean test
         app.temperature_history.clear()
         
