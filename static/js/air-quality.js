@@ -68,7 +68,7 @@ class AirQualityMonitor {
         const reading = data.latest_reading;
         
         // Update AQI value and level
-        this.utils.updateElementText('current-aqi', reading.aqi || '--');
+        this.utils.updateElementText('aqi-value', reading.aqi || '--');
         this.utils.updateAQIElement('aqi-level', reading.aqi);
         
         // Update particle values
@@ -89,7 +89,7 @@ class AirQualityMonitor {
                 timeZone: 'America/Los_Angeles',
                 timeZoneName: 'short'
             });
-            this.utils.updateElementText('last-air-update', `Last updated: ${timeString}`);
+            this.utils.updateElementText('last-update', timeString);
         }
     }
 
@@ -132,12 +132,12 @@ class AirQualityMonitor {
      * Set no data state for air quality display
      */
     setNoDataState() {
-        this.utils.updateElementText('current-aqi', '--');
+        this.utils.updateElementText('aqi-value', '--');
         this.utils.updateElementText('aqi-level', 'No Data');
         this.utils.updateElementText('pm1-value', '--');
         this.utils.updateElementText('pm25-value', '--');
         this.utils.updateElementText('pm10-value', '--');
-        this.utils.updateElementText('last-air-update', 'No sensor data available');
+        this.utils.updateElementText('last-update', 'No sensor data available');
     }
 
     /**
