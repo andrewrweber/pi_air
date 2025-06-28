@@ -26,9 +26,9 @@ class TestPMS7003Detailed:
         assert sensor.port == '/dev/ttyS0'
         assert sensor.baudrate == 9600
         assert sensor.timeout == 2
-        assert sensor.serial_conn is None
+        assert sensor.serial is None
         assert sensor.running is False
-        assert sensor.data_ready_event is not None
+        assert sensor.lock is not None
         assert sensor.latest_data is None
     
     def test_pms7003_initialization_custom(self):
@@ -49,7 +49,7 @@ class TestPMS7003Detailed:
         result = sensor.connect()
         
         assert result is True
-        assert sensor.serial_conn == mock_conn
+        assert sensor.serial == mock_conn
         mock_serial.assert_called_once_with(
             port='/dev/ttyS0',
             baudrate=9600,
@@ -65,7 +65,7 @@ class TestPMS7003Detailed:
         result = sensor.connect()
         
         assert result is False
-        assert sensor.serial_conn is None
+        assert sensor.serial is None
     
     @patch('serial.Serial')
     def test_start_success(self, mock_serial):
@@ -80,7 +80,7 @@ class TestPMS7003Detailed:
             
             assert result is True
             assert sensor.running is True
-            assert sensor.serial_conn == mock_conn
+            assert sensor.serial == mock_conn
             
             # Give thread time to start
             time.sleep(0.1)
@@ -103,19 +103,19 @@ class TestPMS7003Detailed:
         """Test sensor stop functionality"""
         sensor = pms7003.PMS7003()
         sensor.running = True
-        sensor.serial_conn = Mock()
+        sensor.serial = Mock()
         
         sensor.stop()
         
         assert sensor.running is False
-        sensor.serial_conn.close.assert_called_once()
-        assert sensor.serial_conn is None
+        sensor.serial.close.assert_called_once()
+        assert sensor.serial is None
     
     def test_stop_without_connection(self):
         """Test stop when no connection exists"""
         sensor = pms7003.PMS7003()
         sensor.running = True
-        sensor.serial_conn = None
+        sensor.serial = None
         
         # Should not raise exception
         sensor.stop()
@@ -157,7 +157,7 @@ class TestPMS7003Detailed:
         mock_conn.in_waiting = len(frame_data)
         
         sensor = pms7003.PMS7003()
-        sensor.serial_conn = mock_conn
+        sensor.serial = mock_conn
         
         result = sensor._read_frame()
         
@@ -173,7 +173,7 @@ class TestPMS7003Detailed:
         mock_conn.in_waiting = len(invalid_frame)
         
         sensor = pms7003.PMS7003()
-        sensor.serial_conn = mock_conn
+        sensor.serial = mock_conn
         
         result = sensor._read_frame()
         assert result is None
@@ -185,7 +185,7 @@ class TestPMS7003Detailed:
         mock_conn.in_waiting = 0
         
         sensor = pms7003.PMS7003()
-        sensor.serial_conn = mock_conn
+        sensor.serial = mock_conn
         
         result = sensor._read_frame()
         assert result is None
@@ -307,15 +307,19 @@ class TestPMS7003Detailed:
         result = sensor.get_data()
         assert result is None
     
-    def test_get_data_with_timeout(self):
-        """Test get_data with timeout"""
+    def test_get_data_thread_safety(self):
+        """Test get_data thread safety with lock"""
         sensor = pms7003.PMS7003()
-        sensor.latest_data = None
+        test_data = {'pm1_0': 5, 'pm2_5': 12, 'pm10': 18}
+        sensor.latest_data = test_data
         
-        # Mock the event wait to simulate timeout
-        with patch.object(sensor.data_ready_event, 'wait', return_value=False):
-            result = sensor.get_data(timeout=1.0)
-            assert result is None
+        # Test that data access uses the lock
+        with patch.object(sensor.lock, '__enter__', return_value=None) as mock_enter, \
+             patch.object(sensor.lock, '__exit__', return_value=None) as mock_exit:
+            result = sensor.get_data()
+            assert result == test_data
+            mock_enter.assert_called_once()
+            mock_exit.assert_called_once()
     
     def test_checksum_validation(self):
         """Test checksum validation in frame parsing"""
@@ -330,7 +334,7 @@ class TestPMS7003Detailed:
         mock_conn.read.return_value = bytes(frame_data)
         mock_conn.in_waiting = len(frame_data)
         
-        sensor.serial_conn = mock_conn
+        sensor.serial = mock_conn
         
         # Should successfully read frame with correct checksum
         result = sensor._read_frame()

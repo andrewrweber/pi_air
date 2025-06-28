@@ -61,19 +61,18 @@ class TestBackgroundThreads:
         # Clear temperature history for clean test
         app.temperature_history.clear()
         
-        # Mock the threading event to stop the loop quickly
-        with patch('threading.Event') as mock_event:
-            mock_event_instance = Mock()
-            mock_event_instance.wait.side_effect = [False, True]  # Run once then stop
-            mock_event.return_value = mock_event_instance
-            
-            # Run the function in a separate thread briefly
-            thread = threading.Thread(target=app.sample_temperature_and_system_stats)
-            thread.daemon = True
-            thread.start()
-            
-            # Give it a moment to execute
-            time.sleep(0.1)
+        # Mock time.sleep to control the infinite loop
+        def side_effect_sleep(duration):
+            if side_effect_sleep.call_count >= 2:  # Stop after 2 iterations
+                raise KeyboardInterrupt()
+            side_effect_sleep.call_count += 1
+        side_effect_sleep.call_count = 0
+        
+        with patch('time.sleep', side_effect=side_effect_sleep):
+            try:
+                app.sample_temperature_and_system_stats()
+            except KeyboardInterrupt:
+                pass  # Expected to stop the loop
             
             # Verify temperature was sampled
             mock_get_temp.assert_called()
@@ -93,17 +92,18 @@ class TestBackgroundThreads:
         original_temp = app.latest_temperature
         app.temperature_history.clear()
         
-        # Mock the threading event
-        with patch('threading.Event') as mock_event:
-            mock_event_instance = Mock()
-            mock_event_instance.wait.side_effect = [False, True]
-            mock_event.return_value = mock_event_instance
-            
-            # Run briefly
-            thread = threading.Thread(target=app.sample_temperature_and_system_stats)
-            thread.daemon = True
-            thread.start()
-            time.sleep(0.1)
+        # Mock time.sleep to control the infinite loop
+        def side_effect_sleep(duration):
+            if side_effect_sleep.call_count >= 1:  # Stop after 1 iteration
+                raise KeyboardInterrupt()
+            side_effect_sleep.call_count += 1
+        side_effect_sleep.call_count = 0
+        
+        with patch('time.sleep', side_effect=side_effect_sleep):
+            try:
+                app.sample_temperature_and_system_stats()
+            except KeyboardInterrupt:
+                pass  # Expected to stop the loop
             
             # Verify temperature read was attempted
             mock_get_temp.assert_called()
@@ -130,15 +130,18 @@ class TestBackgroundThreads:
             # Simulate time progression to trigger database write
             mock_time.side_effect = [0, 5, 10, 35]  # 30+ second gap triggers write
             
-            with patch('threading.Event') as mock_event:
-                mock_event_instance = Mock()
-                mock_event_instance.wait.side_effect = [False, False, True]
-                mock_event.return_value = mock_event_instance
-                
-                thread = threading.Thread(target=app.sample_temperature_and_system_stats)
-                thread.daemon = True
-                thread.start()
-                time.sleep(0.1)
+            # Mock time.sleep to control the infinite loop
+            def side_effect_sleep(duration):
+                if side_effect_sleep.call_count >= 2:  # Stop after triggering DB write
+                    raise KeyboardInterrupt()
+                side_effect_sleep.call_count += 1
+            side_effect_sleep.call_count = 0
+            
+            with patch('time.sleep', side_effect=side_effect_sleep):
+                try:
+                    app.sample_temperature_and_system_stats()
+                except KeyboardInterrupt:
+                    pass  # Expected to stop the loop
                 
                 # Database insert should have been called
                 mock_insert.assert_called()
@@ -164,16 +167,19 @@ class TestBackgroundThreads:
             mock_memory_obj.percent = 40.0
             mock_memory.return_value = mock_memory_obj
             
-            with patch('threading.Event') as mock_event:
-                mock_event_instance = Mock()
-                mock_event_instance.wait.side_effect = [False, True]
-                mock_event.return_value = mock_event_instance
-                
+            # Mock time.sleep to control the infinite loop
+            def side_effect_sleep(duration):
+                if side_effect_sleep.call_count >= 2:  # Stop after triggering DB write
+                    raise KeyboardInterrupt()
+                side_effect_sleep.call_count += 1
+            side_effect_sleep.call_count = 0
+            
+            with patch('time.sleep', side_effect=side_effect_sleep):
                 # Should not raise exception even if database write fails
-                thread = threading.Thread(target=app.sample_temperature_and_system_stats)
-                thread.daemon = True
-                thread.start()
-                time.sleep(0.1)
+                try:
+                    app.sample_temperature_and_system_stats()
+                except KeyboardInterrupt:
+                    pass  # Expected to stop the loop
                 
                 # Database insert should have been attempted
                 mock_insert.assert_called()

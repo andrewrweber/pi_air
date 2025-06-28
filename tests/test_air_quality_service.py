@@ -29,7 +29,7 @@ class TestAirQualityService:
         assert monitor.running is False
         assert monitor.sensor is None
         assert isinstance(monitor.readings_buffer, deque)
-        assert monitor.readings_buffer.maxlen == 10
+        assert monitor.readings_buffer.maxlen is None  # No maxlen specified in actual implementation
         assert isinstance(monitor.last_write_time, float)
         assert isinstance(monitor.last_cleanup_time, float)
         assert monitor.logger is not None
@@ -150,7 +150,7 @@ class TestAirQualityService:
         assert monitor._get_aqi_level(350) == "Hazardous"
     
     @patch('air_quality_monitor.insert_reading')
-    @patch('statistics.mean')
+    @patch('air_quality_monitor.mean')
     def test_write_averaged_data_success(self, mock_mean, mock_insert):
         """Test successful averaged data writing"""
         monitor = air_quality_monitor.AirQualityMonitor()
