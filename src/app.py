@@ -135,15 +135,8 @@ def sample_temperature_and_system_stats():
             should_write_time = time_diff >= db_write_interval
             temp_valid = temp is not None
             
-            # DIAGNOSTIC: Log database write condition evaluation
-            logger.info(f"🔍 DB WRITE CHECK: current_time={current_time}, last_db_write={last_db_write}, time_diff={time_diff}")
-            logger.info(f"🔍 DB WRITE CHECK: {time_diff} >= {db_write_interval} = {should_write_time}")
-            logger.info(f"🔍 DB WRITE CHECK: temp={temp} is not None = {temp_valid}")
-            logger.info(f"🔍 DB WRITE CHECK: WILL WRITE = {should_write_time and temp_valid}")
-            
             if should_write_time:
                 if temp_valid:
-                    logger.info(f"🎯 ATTEMPTING DATABASE WRITE!")
                     try:
                         insert_system_reading(
                             cpu_temp=temp,
@@ -151,18 +144,14 @@ def sample_temperature_and_system_stats():
                             memory_usage=memory_usage,
                             disk_usage=disk_usage
                         )
-                        logger.info(f"🎯 DATABASE WRITE SUCCESS: temp={temp}°C, CPU={cpu_usage}%, mem={memory_usage}%")
+                        logger.debug(f"Database write successful: temp={temp}°C, CPU={cpu_usage}%, mem={memory_usage}%")
                         last_db_write = current_time
-                        logger.info(f"🎯 UPDATED last_db_write to {last_db_write}")
                     except Exception as e:
-                        logger.error(f"❌ DATABASE WRITE ERROR: {e}")
+                        logger.error(f"Database write failed: {e}")
                 else:
-                    logger.warning(f"⚠️ SKIPPING DATABASE WRITE: temp is None (CPU={cpu_usage}%, mem={memory_usage}%)")
+                    logger.debug(f"Skipping database write: temperature is None")
                     # Still update last_db_write to avoid spam, but try again sooner
                     last_db_write = current_time - (db_write_interval // 2)
-                    logger.info(f"⚠️ UPDATED last_db_write to {last_db_write} (retry sooner)")
-            else:
-                logger.info(f"⏱️ NOT TIME TO WRITE YET: {time_diff} < {db_write_interval}")
                     
         except Exception as e:
             logger.error(f"Error sampling system stats: {e}")

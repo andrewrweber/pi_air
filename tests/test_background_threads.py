@@ -232,241 +232,7 @@ class TestBackgroundThreads:
             timestamp, temp = app.temperature_history[-1]
             assert temp is None
     
-    @patch('app.get_cpu_temperature')
-    @patch('app.insert_system_reading')
-    @patch('psutil.cpu_percent')
-    @patch('psutil.virtual_memory')
-    @patch('psutil.disk_usage')
-    @patch('time.time')
-    def test_database_write_interval_diagnostic(self, mock_time, mock_disk, mock_memory, 
-                                              mock_cpu_percent, mock_insert, mock_get_temp):
-        """Diagnostic test to understand why database writes aren't happening"""
-        
-        # Setup mocks
-        mock_get_temp.return_value = 55.0
-        mock_cpu_percent.return_value = 30.0
-        
-        mock_memory_obj = Mock()
-        mock_memory_obj.percent = 50.0
-        mock_memory.return_value = mock_memory_obj
-        
-        mock_disk_obj = Mock()
-        mock_disk_obj.percent = 75.0
-        mock_disk.return_value = mock_disk_obj
-        
-        # Track time.time() calls with detailed logging
-        time_call_count = [0]
-        def debug_time():
-            call_num = time_call_count[0] + 1
-            if call_num == 1:
-                result = 0  # First iteration
-                print(f"TIME CALL {call_num}: Returning {result} (iteration 1 current_time)")
-            elif call_num == 2:  
-                result = 35  # Second iteration - should trigger write
-                print(f"TIME CALL {call_num}: Returning {result} (iteration 2 current_time - should trigger write!)")
-            else:
-                result = 35
-                print(f"TIME CALL {call_num}: Returning {result}")
-            time_call_count[0] += 1
-            return result
-            
-        mock_time.side_effect = debug_time
-        
-        # Add diagnostic wrapper to insert function
-        def diagnostic_insert(*args, **kwargs):
-            print(f"🎉 DATABASE WRITE CALLED! Args: {args}, Kwargs: {kwargs}")
-            return None  # Don't actually call anything
-            
-        mock_insert.side_effect = diagnostic_insert
-        
-        app.temperature_history.clear()
-        
-        # Patch the app module to add diagnostic logging to the actual function
-        original_function = app.sample_temperature_and_system_stats
-        
-        def diagnostic_wrapper():
-            """Wrapper with diagnostic logging for the database write condition"""
-            global latest_temperature
-            last_db_write = 0
-            db_write_interval = 30
-            
-            print("🔍 DIAGNOSTIC: Starting function execution")
-            print(f"🔍 DIAGNOSTIC: Initial last_db_write={last_db_write}, db_write_interval={db_write_interval}")
-            
-            iteration = 0
-            while True:
-                iteration += 1
-                try:
-                    current_time = mock_time()
-                    print(f"🔍 ITERATION {iteration}: current_time={current_time}")
-                    
-                    # Get system metrics
-                    temp = mock_get_temp()
-                    cpu_usage = mock_cpu_percent()
-                    memory_usage = mock_memory().percent
-                    disk_usage = mock_disk().percent
-                    
-                    print(f"🔍 ITERATION {iteration}: temp={temp}, cpu={cpu_usage}%, mem={memory_usage}%, disk={disk_usage}%")
-                    
-                    # Always update real-time history
-                    timestamp = "2023-01-01T12:00:00"  # Fixed timestamp
-                    with app.temperature_lock:
-                        app.temperature_history.append((timestamp, temp))
-                        if temp is not None:
-                            app.latest_temperature = temp
-                    
-                    print(f"🔍 ITERATION {iteration}: Updated latest_temperature to {app.latest_temperature}")
-                    
-                    # Check database write condition with detailed logging
-                    time_diff = current_time - last_db_write
-                    should_write_time = time_diff >= db_write_interval
-                    temp_valid = temp is not None
-                    
-                    print(f"🔍 ITERATION {iteration}: Database write check:")
-                    print(f"   current_time - last_db_write = {current_time} - {last_db_write} = {time_diff}")
-                    print(f"   {time_diff} >= {db_write_interval} = {should_write_time}")
-                    print(f"   temp is not None = {temp} is not None = {temp_valid}")
-                    print(f"   WILL WRITE: {should_write_time and temp_valid}")
-                    
-                    # Write to database every 30 seconds (only if we have valid temperature)
-                    if should_write_time:
-                        if temp_valid:
-                            print(f"🎯 ITERATION {iteration}: CALLING DATABASE WRITE!")
-                            try:
-                                mock_insert(
-                                    cpu_temp=temp,
-                                    cpu_usage=cpu_usage,
-                                    memory_usage=memory_usage,
-                                    disk_usage=disk_usage
-                                )
-                                print(f"🎯 ITERATION {iteration}: Database write completed successfully")
-                                last_db_write = current_time
-                                print(f"🎯 ITERATION {iteration}: Updated last_db_write to {last_db_write}")
-                            except Exception as e:
-                                print(f"❌ ITERATION {iteration}: Database write failed: {e}")
-                        else:
-                            print(f"⚠️  ITERATION {iteration}: Skipping database write - temp is None")
-                            last_db_write = current_time - (db_write_interval // 2)
-                    else:
-                        print(f"⏱️  ITERATION {iteration}: Not time to write yet")
-                        
-                except Exception as e:
-                    print(f"❌ ITERATION {iteration}: Error in iteration: {e}")
-                    
-                # Simulate time.sleep(5)
-                print(f"🔍 ITERATION {iteration}: Sleeping...")
-                if iteration >= 2:  # Stop after 2 iterations
-                    print(f"🔍 DIAGNOSTIC: Stopping after {iteration} iterations")
-                    break
-        
-        # Replace the function temporarily
-        app.sample_temperature_and_system_stats = diagnostic_wrapper
-        
-        try:
-            diagnostic_wrapper()
-        except Exception as e:
-            print(f"❌ DIAGNOSTIC: Exception in wrapper: {e}")
-        finally:
-            # Restore original function
-            app.sample_temperature_and_system_stats = original_function
-        
-        print(f"🔍 FINAL STATE:")
-        print(f"   mock_insert.call_count: {mock_insert.call_count}")
-        print(f"   app.latest_temperature: {app.latest_temperature}")
-        print(f"   len(app.temperature_history): {len(app.temperature_history)}")
-        
-        # This test is purely diagnostic - we expect it to pass regardless
-        assert mock_get_temp.call_count >= 2, "Should have called get_cpu_temperature at least twice"
     
-    @patch('app.get_cpu_temperature')
-    @patch('app.insert_system_reading')
-    @patch('psutil.cpu_percent')
-    @patch('psutil.virtual_memory')
-    @patch('psutil.disk_usage')
-    @patch('time.time')
-    def test_real_function_with_diagnostics(self, mock_time, mock_disk, mock_memory, 
-                                          mock_cpu_percent, mock_insert, mock_get_temp):
-        """Test the REAL function with diagnostic logging injected"""
-        
-        # Setup mocks
-        mock_get_temp.return_value = 55.0
-        mock_cpu_percent.return_value = 30.0
-        
-        mock_memory_obj = Mock()
-        mock_memory_obj.percent = 50.0
-        mock_memory.return_value = mock_memory_obj
-        
-        mock_disk_obj = Mock()
-        mock_disk_obj.percent = 75.0
-        mock_disk.return_value = mock_disk_obj
-        
-        # Track time.time() calls
-        time_call_count = [0]
-        def debug_time():
-            call_num = time_call_count[0] + 1
-            if call_num == 1:
-                result = 0
-                print(f"⏰ REAL FUNCTION TIME CALL {call_num}: Returning {result}")
-            elif call_num == 2:  
-                result = 35
-                print(f"⏰ REAL FUNCTION TIME CALL {call_num}: Returning {result}")
-            else:
-                result = 35
-                print(f"⏰ REAL FUNCTION TIME CALL {call_num}: Returning {result}")
-            time_call_count[0] += 1
-            return result
-            
-        mock_time.side_effect = debug_time
-        
-        # Add diagnostic wrapper to insert function
-        def diagnostic_insert(*args, **kwargs):
-            print(f"🎉 REAL FUNCTION: DATABASE WRITE CALLED! Args: {args}, Kwargs: {kwargs}")
-            return None
-            
-        mock_insert.side_effect = diagnostic_insert
-        
-        app.temperature_history.clear()
-        
-        # Patch the real function with diagnostic logging
-        import types
-        
-        # Get the real function source and inject logging
-        with patch('datetime.datetime') as mock_datetime:
-            mock_datetime.now.return_value.isoformat.return_value = "2023-01-01T12:00:00"
-            
-            # Mock time.sleep to stop after 2 iterations
-            def debug_sleep(duration):
-                print(f"💤 REAL FUNCTION: time.sleep({duration}) call #{debug_sleep.call_count + 1}")
-                if debug_sleep.call_count >= 2:
-                    raise KeyboardInterrupt()
-                debug_sleep.call_count += 1
-            debug_sleep.call_count = 0
-            
-            with patch('time.sleep', side_effect=debug_sleep):
-                print("🔍 CALLING REAL app.sample_temperature_and_system_stats() FUNCTION")
-                try:
-                    app.sample_temperature_and_system_stats()
-                except KeyboardInterrupt:
-                    print("🔍 REAL FUNCTION: KeyboardInterrupt caught")
-                    pass
-                
-                print(f"🔍 REAL FUNCTION FINAL STATE:")
-                print(f"   time.time() call count: {time_call_count[0]}")
-                print(f"   mock_insert.call_count: {mock_insert.call_count}")
-                print(f"   mock_get_temp.call_count: {mock_get_temp.call_count}")
-                print(f"   app.latest_temperature: {app.latest_temperature}")
-                print(f"   len(app.temperature_history): {len(app.temperature_history)}")
-                
-                # Compare with our working diagnostic
-                if mock_insert.call_count == 0:
-                    print("❌ REAL FUNCTION: Database write did NOT happen")
-                    print("❌ This proves the real function has different behavior than our diagnostic wrapper")
-                else:
-                    print("✅ REAL FUNCTION: Database write DID happen")
-                    print("✅ Real function works correctly!")
-        
-        # This is diagnostic - don't fail the test
-        assert True, "Diagnostic test always passes"
     
     @patch('app.get_cpu_temperature')
     @patch('app.insert_system_reading')
@@ -492,17 +258,8 @@ class TestBackgroundThreads:
         mock_disk_obj.percent = 60.0
         mock_disk.return_value = mock_disk_obj
         
-        # Add comprehensive debugging like successful test
-        time_call_count = [0]
-        time_values = [0, 35, 35, 35, 35, 35]
-        
-        def debug_time():
-            result = time_values[min(time_call_count[0], len(time_values) - 1)]
-            print(f"DEBUG: time.time() call #{time_call_count[0] + 1} returning {result}")
-            time_call_count[0] += 1
-            return result
-            
-        mock_time.side_effect = debug_time
+        # Mock time to trigger database write after 30+ seconds
+        mock_time.side_effect = [0] + [35] * 50
         
         app.temperature_history.clear()
         
@@ -510,7 +267,6 @@ class TestBackgroundThreads:
             mock_datetime.now.return_value.isoformat.return_value = "2023-01-01T12:00:00"
             
             def side_effect_sleep(duration):
-                print(f"DEBUG: time.sleep({duration}) call #{side_effect_sleep.call_count + 1}")
                 if side_effect_sleep.call_count >= 2:  # Run 2 full iterations to trigger write
                     raise KeyboardInterrupt()
                 side_effect_sleep.call_count += 1
@@ -521,25 +277,14 @@ class TestBackgroundThreads:
                 try:
                     app.sample_temperature_and_system_stats()
                 except KeyboardInterrupt:
-                    print("DEBUG: KeyboardInterrupt caught")
                     pass  # Expected to stop the loop
                 
-                print(f"DEBUG: time.time() was called {time_call_count[0]} times")
-                print(f"DEBUG: insert_system_reading call count: {mock_insert.call_count}")
-                print(f"DEBUG: insert_system_reading called: {mock_insert.called}")
-                print(f"DEBUG: get_cpu_temperature call count: {mock_get_temp.call_count}")
-                print(f"DEBUG: get_cpu_temperature return value: {mock_get_temp.return_value}")
-                print(f"DEBUG: app.latest_temperature: {app.latest_temperature}")
-                print(f"DEBUG: mock_insert.side_effect: {mock_insert.side_effect}")
+                # Verify database write was attempted despite the error
+                mock_insert.assert_called()
                 
-                if mock_insert.call_count > 0:
-                    print("SUCCESS: Database write was attempted (even though it should fail)!")
-                    mock_insert.assert_called()
-                else:
-                    print("ERROR: Database write was NOT attempted!")
-                    print("This means the database write condition was never met")
-                    # Still fail the test but with more info
-                    mock_insert.assert_called()
+                # Verify temperature was still collected and stored
+                assert mock_get_temp.call_count > 0
+                assert app.latest_temperature == 55.0
     
     def test_temperature_history_maxlen_behavior(self):
         """Test that temperature history respects maxlen limit"""
