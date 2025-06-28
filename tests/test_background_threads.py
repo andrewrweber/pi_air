@@ -65,16 +65,16 @@ class TestBackgroundThreads:
         mock_disk_obj.percent = 85.2
         mock_disk.return_value = mock_disk_obj
         
-        # Mock time progression to trigger database write (30+ second gap)
+        # Mock time progression: first iteration at time 0, second at time 35 (>30s later)
         # Need multiple values since time.time() is called by logging system too
-        mock_time.side_effect = [0, 35] + [35] * 10  # Provide extra values for logging calls
+        mock_time.side_effect = [0, 0] + [35] + [35] * 10  # First call=0 (last_db_write), second call=0 (current_time), third call=35 (next iteration)
         
         # Clear temperature history for clean test
         app.temperature_history.clear()
         
-        # Mock time.sleep to control the infinite loop
+        # Mock time.sleep to control the infinite loop - run two iterations
         def side_effect_sleep(duration):
-            if side_effect_sleep.call_count >= 1:  # Stop after 1 iteration
+            if side_effect_sleep.call_count >= 2:  # Stop after 2 iterations
                 raise KeyboardInterrupt()
             side_effect_sleep.call_count += 1
         side_effect_sleep.call_count = 0
@@ -168,13 +168,13 @@ class TestBackgroundThreads:
         
         # Mock time to control write intervals
         with patch('time.time') as mock_time:
-            # Simulate time progression to trigger database write
+            # Mock time progression: first iteration at time 0, second at time 35 (>30s later)
             # Need multiple values since time.time() is called by logging system too
-            mock_time.side_effect = [0, 35] + [35] * 10  # Provide extra values for logging calls
+            mock_time.side_effect = [0, 0] + [35] + [35] * 10  # First call=0 (last_db_write), second call=0 (current_time), third call=35 (next iteration)
             
             # Mock time.sleep to control the infinite loop
             def side_effect_sleep(duration):
-                if side_effect_sleep.call_count >= 2:  # Stop after triggering DB write
+                if side_effect_sleep.call_count >= 2:  # Stop after 2 iterations to trigger DB write
                     raise KeyboardInterrupt()
                 side_effect_sleep.call_count += 1
             side_effect_sleep.call_count = 0
@@ -205,7 +205,7 @@ class TestBackgroundThreads:
              patch('psutil.cpu_percent', return_value=25.0), \
              patch('psutil.virtual_memory') as mock_memory, \
              patch('psutil.disk_usage') as mock_disk, \
-             patch('time.time', side_effect=[0, 35] + [35] * 10):  # Trigger write, extra values for logging
+             patch('time.time', side_effect=[0, 0] + [35] + [35] * 10):  # First call=0 (last_db_write), second call=0 (current_time), third call=35 (next iteration)
             
             mock_memory_obj = Mock()
             mock_memory_obj.percent = 40.0
@@ -217,7 +217,7 @@ class TestBackgroundThreads:
             
             # Mock time.sleep to control the infinite loop
             def side_effect_sleep(duration):
-                if side_effect_sleep.call_count >= 2:  # Stop after triggering DB write
+                if side_effect_sleep.call_count >= 2:  # Stop after 2 iterations to trigger DB write
                     raise KeyboardInterrupt()
                 side_effect_sleep.call_count += 1
             side_effect_sleep.call_count = 0
