@@ -130,11 +130,11 @@ class TestPMS7003Detailed:
         sensor = pms7003.PMS7003()
         sensor.running = True
         
-        # Create valid PMS7003 frame
+        # Create valid PMS7003 frame (total 32 bytes)
         frame_data = bytearray([
-            0x42, 0x4d,  # Start bytes
+            0x42, 0x4d,  # Start bytes (2 bytes)
             0x00, 0x1c,  # Frame length (28 bytes)
-        ] + [0x00] * 28)  # 28 bytes of data
+        ] + [0x00] * 26)  # 26 bytes of data + 2 checksum bytes = 28 total
         
         # Calculate checksum
         checksum = sum(frame_data) % (2**16)
@@ -146,7 +146,7 @@ class TestPMS7003Detailed:
         # _read_frame reads:
         # 1. Byte-by-byte to find start bytes (0x42, then 0x4d)  
         # 2. Then reads FRAME_LENGTH-2 (30) bytes in one call
-        rest_of_frame = bytes(frame_data[2:])  # Everything after start bytes
+        rest_of_frame = bytes(frame_data[2:])  # 30 bytes after start bytes
         
         mock_conn.read.side_effect = [
             bytes([0x42]),      # First start byte
