@@ -210,16 +210,25 @@ function formatAQILevel(level) {
  * @returns {string} Day name (Today, Tomorrow, or day name)
  */
 function formatDayName(date) {
+    // Convert to Pacific Time for comparison
     const today = new Date();
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
     
-    if (date.toDateString() === today.toDateString()) {
+    // Compare dates in Pacific Time
+    const dateInPT = date.toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles' });
+    const todayInPT = today.toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles' });
+    const tomorrowInPT = tomorrow.toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles' });
+    
+    if (dateInPT === todayInPT) {
         return 'Today';
-    } else if (date.toDateString() === tomorrow.toDateString()) {
+    } else if (dateInPT === tomorrowInPT) {
         return 'Tomorrow';
     } else {
-        return date.toLocaleDateString('en-US', { weekday: 'short' });
+        return date.toLocaleDateString('en-US', { 
+            weekday: 'short',
+            timeZone: 'America/Los_Angeles'
+        });
     }
 }
 
@@ -232,10 +241,14 @@ function formatDayName(date) {
 function formatTimeForChart(date, range) {
     if (range === '72h') {
         // For 3-day view, show day and hour
-        const day = date.toLocaleDateString('en-US', { weekday: 'short' });
+        const day = date.toLocaleDateString('en-US', { 
+            weekday: 'short',
+            timeZone: 'America/Los_Angeles'
+        });
         const hour = date.toLocaleTimeString('en-US', { 
             hour: 'numeric', 
-            hour12: true 
+            hour12: true,
+            timeZone: 'America/Los_Angeles'
         });
         return `${day} ${hour}`;
     } else {
@@ -243,7 +256,8 @@ function formatTimeForChart(date, range) {
         return date.toLocaleTimeString('en-US', { 
             hour: 'numeric',
             minute: '2-digit',
-            hour12: true 
+            hour12: true,
+            timeZone: 'America/Los_Angeles'
         });
     }
 }
