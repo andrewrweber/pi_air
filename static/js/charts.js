@@ -179,7 +179,6 @@ class ChartManager {
      */
     initializeParticlesChart() {
         const ctx = document.getElementById('particlesChart').getContext('2d');
-        const config = window.AppConfig;
         const isMobile = window.Utils.isMobile();
         
         this.charts.particles = new Chart(ctx, {
@@ -188,61 +187,96 @@ class ChartManager {
                 labels: [],
                 datasets: [
                     {
-                        label: 'PM2.5',
+                        label: 'PM2.5 (μg/m³)',
                         data: [],
-                        borderColor: config.CHART_COLORS.danger,
-                        backgroundColor: `${config.CHART_COLORS.danger}1A`,
-                        borderWidth: isMobile ? 2 : 3,
-                        fill: true,
-                        tension: 0.4,
-                        pointRadius: isMobile ? 2 : 3,
-                        pointHoverRadius: isMobile ? 4 : 6
+                        borderColor: 'rgb(255, 99, 132)',
+                        backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                        tension: 0.1,
+                        spanGaps: true
                     },
                     {
-                        label: 'PM10',
+                        label: 'PM10 (μg/m³)',
                         data: [],
-                        borderColor: config.CHART_COLORS.warning,
-                        backgroundColor: `${config.CHART_COLORS.warning}1A`,
-                        borderWidth: isMobile ? 2 : 3,
-                        fill: true,
-                        tension: 0.4,
-                        pointRadius: isMobile ? 2 : 3,
-                        pointHoverRadius: isMobile ? 4 : 6
+                        borderColor: 'rgb(54, 162, 235)',
+                        backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                        tension: 0.1,
+                        spanGaps: true
                     },
                     {
-                        label: 'PM1.0',
+                        label: 'PM1.0 (μg/m³)',
                         data: [],
-                        borderColor: config.CHART_COLORS.info,
-                        backgroundColor: `${config.CHART_COLORS.info}1A`,
-                        borderWidth: isMobile ? 2 : 3,
-                        fill: true,
-                        tension: 0.4,
-                        pointRadius: isMobile ? 2 : 3,
-                        pointHoverRadius: isMobile ? 4 : 6
+                        borderColor: 'rgb(255, 205, 86)',
+                        backgroundColor: 'rgba(255, 205, 86, 0.1)',
+                        tension: 0.1,
+                        spanGaps: true,
+                        hidden: true  // Hidden by default
                     }
                 ]
             },
             options: {
-                ...config.CHART_DEFAULTS,
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
                 scales: {
-                    ...config.CHART_DEFAULTS.scales,
                     x: {
-                        ...config.CHART_DEFAULTS.scales.x,
+                        title: {
+                            display: window.innerWidth >= 768,
+                            text: 'Time',
+                            font: {
+                                size: window.innerWidth < 768 ? 10 : 12
+                            }
+                        },
                         ticks: {
-                            ...config.CHART_DEFAULTS.scales.x.ticks,
-                            maxTicksLimit: isMobile ? 6 : 12
+                            maxTicksLimit: window.innerWidth < 768 ? 6 : 10,
+                            font: {
+                                size: window.innerWidth < 768 ? 9 : 11
+                            }
                         }
                     },
                     y: {
-                        ...config.CHART_DEFAULTS.scales.y,
-                        beginAtZero: true,
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
                         title: {
-                            display: true,
-                            text: 'Concentration (μg/m³)',
+                            display: window.innerWidth >= 768,
+                            text: 'Particulate Matter (μg/m³)',
                             font: {
-                                size: isMobile ? 10 : 12
+                                size: window.innerWidth < 768 ? 10 : 12
+                            }
+                        },
+                        min: 0,
+                        suggestedMax: 50,
+                        ticks: {
+                            beginAtZero: true,
+                            maxTicksLimit: window.innerWidth < 768 ? 6 : 8,
+                            font: {
+                                size: window.innerWidth < 768 ? 9 : 11
                             }
                         }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true,
+                            padding: window.innerWidth < 768 ? 8 : 15,
+                            font: {
+                                size: window.innerWidth < 768 ? 10 : 12
+                            },
+                            boxWidth: window.innerWidth < 768 ? 8 : 12
+                        }
+                    }
+                },
+                // Mobile-optimized settings
+                elements: {
+                    point: {
+                        radius: window.innerWidth < 768 ? 2 : 3,
+                        hoverRadius: window.innerWidth < 768 ? 4 : 6
                     }
                 }
             }
@@ -254,81 +288,127 @@ class ChartManager {
      */
     initializeAQIChart() {
         const ctx = document.getElementById('aqiChart').getContext('2d');
-        const config = window.AppConfig;
-        const isMobile = window.Utils.isMobile();
         
         this.charts.aqi = new Chart(ctx, {
             type: 'line',
             data: {
                 labels: [],
-                datasets: [{
-                    label: 'Air Quality Index',
-                    data: [],
-                    borderColor: config.CHART_COLORS.primary,
-                    backgroundColor: 'rgba(197, 26, 74, 0.1)',
-                    borderWidth: isMobile ? 2 : 3,
-                    fill: true,
-                    tension: 0.4,
-                    pointRadius: isMobile ? 2 : 3,
-                    pointHoverRadius: isMobile ? 4 : 6
-                }]
+                datasets: [
+                    {
+                        label: 'Air Quality Index',
+                        data: [],
+                        borderColor: 'rgb(75, 192, 192)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                        tension: 0.1,
+                        spanGaps: true,
+                        borderWidth: 3,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }
+                ]
             },
             options: {
-                ...config.CHART_DEFAULTS,
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
                 scales: {
-                    ...config.CHART_DEFAULTS.scales,
                     x: {
-                        ...config.CHART_DEFAULTS.scales.x,
-                        ticks: {
-                            ...config.CHART_DEFAULTS.scales.x.ticks,
-                            maxTicksLimit: isMobile ? 6 : 12
-                        }
-                    },
-                    y: {
-                        ...config.CHART_DEFAULTS.scales.y,
-                        beginAtZero: true,
-                        suggestedMax: 200,
                         title: {
-                            display: true,
-                            text: 'AQI Value',
+                            display: window.innerWidth >= 768,
+                            text: 'Time',
                             font: {
-                                size: isMobile ? 10 : 12
+                                size: window.innerWidth < 768 ? 10 : 12
                             }
                         },
                         ticks: {
-                            ...config.CHART_DEFAULTS.scales.y.ticks,
+                            maxTicksLimit: window.innerWidth < 768 ? 6 : 10,
+                            font: {
+                                size: window.innerWidth < 768 ? 9 : 11
+                            }
+                        }
+                    },
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: {
+                            display: window.innerWidth >= 768,
+                            text: 'Air Quality Index',
+                            font: {
+                                size: window.innerWidth < 768 ? 10 : 12
+                            }
+                        },
+                        min: 0,
+                        suggestedMax: 100,
+                        ticks: {
+                            beginAtZero: true,
+                            stepSize: 50,
+                            maxTicksLimit: window.innerWidth < 768 ? 4 : 6,
+                            font: {
+                                size: window.innerWidth < 768 ? 9 : 11
+                            },
                             callback: function(value) {
-                                const labels = {
-                                    0: 'Good',
-                                    50: 'Moderate',
-                                    100: 'Unhealthy for Sensitive',
-                                    150: 'Unhealthy',
-                                    200: 'Very Unhealthy',
-                                    300: 'Hazardous'
-                                };
-                                return labels[value] || value;
+                                // Mobile-optimized AQI labels
+                                if (window.innerWidth < 768) {
+                                    if (value === 0) return '0';
+                                    if (value === 50) return '50';
+                                    if (value === 100) return '100';
+                                    if (value === 150) return '150';
+                                    return value;
+                                } else {
+                                    // Full labels for desktop
+                                    if (value === 0) return '0';
+                                    if (value === 50) return '50 (Good)';
+                                    if (value === 100) return '100 (Moderate)';
+                                    if (value === 150) return '150 (Unhealthy for Sensitive)';
+                                    if (value === 200) return '200 (Unhealthy)';
+                                    if (value === 300) return '300 (Very Unhealthy)';
+                                    return value;
+                                }
                             }
                         },
                         grid: {
                             color: function(context) {
                                 const value = context.tick.value;
-                                const levels = window.AppConfig.AQI_LEVELS;
-                                
-                                if (value === levels.good.max) return levels.good.color + '40';
-                                if (value === levels.moderate.max) return levels.moderate.color + '40';
-                                if (value === levels.unhealthySensitive.max) return levels.unhealthySensitive.color + '40';
-                                if (value === levels.unhealthy.max) return levels.unhealthy.color + '40';
-                                if (value === levels.veryUnhealthy.max) return levels.veryUnhealthy.color + '40';
+                                // Highlight AQI threshold lines with different colors
+                                if (value === 50) return 'rgba(0, 228, 0, 0.3)';   // Good
+                                if (value === 100) return 'rgba(255, 255, 0, 0.3)'; // Moderate
+                                if (value === 150) return 'rgba(255, 126, 0, 0.3)'; // Unhealthy for Sensitive
+                                if (value === 200) return 'rgba(255, 0, 0, 0.3)';   // Unhealthy
+                                if (value === 300) return 'rgba(143, 63, 151, 0.3)'; // Very Unhealthy
                                 return 'rgba(0, 0, 0, 0.05)';
                             },
                             lineWidth: function(context) {
                                 const value = context.tick.value;
                                 if ([50, 100, 150, 200, 300].includes(value)) {
-                                    return 2;
+                                    return 2;  // Thicker lines for AQI thresholds
                                 }
                                 return 1;
                             }
                         }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true,
+                            padding: window.innerWidth < 768 ? 8 : 15,
+                            font: {
+                                size: window.innerWidth < 768 ? 10 : 12
+                            },
+                            boxWidth: window.innerWidth < 768 ? 8 : 12
+                        }
+                    }
+                },
+                elements: {
+                    point: {
+                        radius: window.innerWidth < 768 ? 2 : 4,
+                        hoverRadius: window.innerWidth < 768 ? 4 : 6
                     }
                 }
             }
