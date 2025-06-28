@@ -264,7 +264,7 @@ class ChartManager {
                 // Mobile-optimized settings
                 elements: {
                     point: {
-                        radius: window.innerWidth < 768 ? 2 : 3,
+                        radius: 0,  // No points to keep lines clear
                         hoverRadius: window.innerWidth < 768 ? 4 : 6
                     }
                 }
@@ -290,9 +290,7 @@ class ChartManager {
                         backgroundColor: 'rgba(75, 192, 192, 0.1)',
                         tension: 0.1,
                         spanGaps: true,
-                        borderWidth: 3,
-                        pointRadius: 4,
-                        pointHoverRadius: 6
+                        borderWidth: 3
                     }
                 ]
             },
@@ -396,7 +394,7 @@ class ChartManager {
                 },
                 elements: {
                     point: {
-                        radius: window.innerWidth < 768 ? 2 : 4,
+                        radius: 0,  // No points to keep lines clear
                         hoverRadius: window.innerWidth < 768 ? 4 : 6
                     }
                 }

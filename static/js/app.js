@@ -107,11 +107,14 @@ class PiAirMonitorApp {
             selectedContent.classList.add('active');
         }
         
-        // Activate selected tab button
-        const selectedButton = document.querySelector(`[data-tab="${tabName}"]`);
-        if (selectedButton) {
-            selectedButton.classList.add('active');
-        }
+        // Activate selected tab button - find by onclick attribute content
+        const allButtons = document.querySelectorAll('.tab-button');
+        allButtons.forEach(button => {
+            const onclick = button.getAttribute('onclick');
+            if (onclick && onclick.includes(`'${tabName}'`)) {
+                button.classList.add('active');
+            }
+        });
         
         this.currentTab = tabName;
         
@@ -119,6 +122,14 @@ class PiAirMonitorApp {
         setTimeout(() => {
             window.dispatchEvent(new Event('resize'));
         }, 100);
+        
+        // If switching to air quality tab, update current readings immediately
+        if (tabName === 'air-quality') {
+            if (this.airQualityMonitor) {
+                this.airQualityMonitor.updateLatestReading();
+                this.airQualityMonitor.updateWorstAirQuality();
+            }
+        }
     }
 
     /**
