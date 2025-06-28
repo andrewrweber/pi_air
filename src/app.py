@@ -131,8 +131,19 @@ def sample_temperature_and_system_stats():
                 logger.debug(f"Temperature collection failed at {timestamp}")
             
             # Write to database every 30 seconds (only if we have valid temperature)
-            if current_time - last_db_write >= db_write_interval:
-                if temp is not None:
+            time_diff = current_time - last_db_write
+            should_write_time = time_diff >= db_write_interval
+            temp_valid = temp is not None
+            
+            # DIAGNOSTIC: Log database write condition evaluation
+            logger.info(f"🔍 DB WRITE CHECK: current_time={current_time}, last_db_write={last_db_write}, time_diff={time_diff}")
+            logger.info(f"🔍 DB WRITE CHECK: {time_diff} >= {db_write_interval} = {should_write_time}")
+            logger.info(f"🔍 DB WRITE CHECK: temp={temp} is not None = {temp_valid}")
+            logger.info(f"🔍 DB WRITE CHECK: WILL WRITE = {should_write_time and temp_valid}")
+            
+            if should_write_time:
+                if temp_valid:
+                    logger.info(f"🎯 ATTEMPTING DATABASE WRITE!")
                     try:
                         insert_system_reading(
                             cpu_temp=temp,
@@ -140,14 +151,18 @@ def sample_temperature_and_system_stats():
                             memory_usage=memory_usage,
                             disk_usage=disk_usage
                         )
-                        logger.debug(f"Inserted system reading: temp={temp}°C, CPU={cpu_usage}%, mem={memory_usage}%")
+                        logger.info(f"🎯 DATABASE WRITE SUCCESS: temp={temp}°C, CPU={cpu_usage}%, mem={memory_usage}%")
                         last_db_write = current_time
+                        logger.info(f"🎯 UPDATED last_db_write to {last_db_write}")
                     except Exception as e:
-                        logger.error(f"Error writing system reading to database: {e}")
+                        logger.error(f"❌ DATABASE WRITE ERROR: {e}")
                 else:
-                    logger.warning(f"Skipping database write due to NULL temperature (CPU={cpu_usage}%, mem={memory_usage}%)")
+                    logger.warning(f"⚠️ SKIPPING DATABASE WRITE: temp is None (CPU={cpu_usage}%, mem={memory_usage}%)")
                     # Still update last_db_write to avoid spam, but try again sooner
                     last_db_write = current_time - (db_write_interval // 2)
+                    logger.info(f"⚠️ UPDATED last_db_write to {last_db_write} (retry sooner)")
+            else:
+                logger.info(f"⏱️ NOT TIME TO WRITE YET: {time_diff} < {db_write_interval}")
                     
         except Exception as e:
             logger.error(f"Error sampling system stats: {e}")
