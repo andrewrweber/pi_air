@@ -100,12 +100,14 @@ def mock_psutil():
         mock_memory_obj.percent = 42.3
         mock_memory_obj.used = 2048 * 1024 * 1024  # 2GB
         mock_memory_obj.total = 4096 * 1024 * 1024  # 4GB
+        mock_memory_obj.available = 2048 * 1024 * 1024  # 2GB available
         mock_memory.return_value = mock_memory_obj
         
         mock_disk_obj = Mock()
         mock_disk_obj.percent = 78.9
         mock_disk_obj.used = 15 * 1024 * 1024 * 1024  # 15GB
         mock_disk_obj.total = 32 * 1024 * 1024 * 1024  # 32GB
+        mock_disk_obj.free = 17 * 1024 * 1024 * 1024  # 17GB free
         mock_disk.return_value = mock_disk_obj
         
         mock_boot.return_value = 1640995200  # Mock boot time

@@ -43,7 +43,7 @@ class TestDatabase:
     def test_insert_air_quality_reading(self, test_db, sample_air_quality_data):
         """Test inserting air quality reading"""
         with patch('database.DB_PATH', test_db):
-            database.insert_air_quality_reading(**sample_air_quality_data)
+            database.insert_reading(**sample_air_quality_data)
             
             # Verify insertion
             latest = database.get_latest_reading()
@@ -65,8 +65,10 @@ class TestDatabase:
             conn.close()
             
             assert row is not None
-            assert row[2] == sample_system_data['cpu_usage']  # cpu_usage column
-            assert row[3] == sample_system_data['memory_usage']  # memory_usage column
+            # Column order in system_readings: id, timestamp, cpu_temp, cpu_usage, memory_usage, disk_usage
+            assert row[2] == sample_system_data['cpu_temp']  # cpu_temp column
+            assert row[3] == sample_system_data['cpu_usage']  # cpu_usage column
+            assert row[4] == sample_system_data['memory_usage']  # memory_usage column
     
     def test_get_latest_reading_empty(self, test_db):
         """Test getting latest reading when database is empty"""
@@ -78,7 +80,7 @@ class TestDatabase:
         """Test getting readings from last 24 hours"""
         with patch('database.DB_PATH', test_db):
             # Insert some test data
-            database.insert_air_quality_reading(**sample_air_quality_data)
+            database.insert_reading(**sample_air_quality_data)
             
             # Get readings
             readings = database.get_readings_last_24h()
