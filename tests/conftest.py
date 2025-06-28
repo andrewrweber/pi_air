@@ -87,41 +87,65 @@ def sample_system_data():
 @pytest.fixture
 def mock_psutil():
     """Mock psutil for system monitoring tests"""
+    from collections import namedtuple
+    
     with patch('psutil.cpu_percent') as mock_cpu, \
          patch('psutil.virtual_memory') as mock_memory, \
          patch('psutil.disk_usage') as mock_disk, \
+         patch('psutil.disk_partitions') as mock_partitions, \
+         patch('psutil.cpu_count') as mock_cpu_count, \
+         patch('psutil.cpu_freq') as mock_cpu_freq, \
          patch('psutil.boot_time') as mock_boot, \
          patch('psutil.net_if_addrs') as mock_net:
         
-        # Configure mock returns
+        # Configure mock returns with proper named tuples
         mock_cpu.return_value = 25.6
-        
-        mock_memory_obj = Mock()
-        mock_memory_obj.percent = 42.3
-        mock_memory_obj.used = 2048 * 1024 * 1024  # 2GB
-        mock_memory_obj.total = 4096 * 1024 * 1024  # 4GB
-        mock_memory_obj.available = 2048 * 1024 * 1024  # 2GB available
-        mock_memory.return_value = mock_memory_obj
-        
-        mock_disk_obj = Mock()
-        mock_disk_obj.percent = 78.9
-        mock_disk_obj.used = 15 * 1024 * 1024 * 1024  # 15GB
-        mock_disk_obj.total = 32 * 1024 * 1024 * 1024  # 32GB
-        mock_disk_obj.free = 17 * 1024 * 1024 * 1024  # 17GB free
-        mock_disk.return_value = mock_disk_obj
-        
+        mock_cpu_count.return_value = 4  # 4 cores
         mock_boot.return_value = 1640995200  # Mock boot time
         
-        # Mock network interfaces
+        # Mock CPU frequency as named tuple
+        CpuFreq = namedtuple('CpuFreq', ['current', 'min', 'max'])
+        mock_cpu_freq.return_value = CpuFreq(current=1400.0, min=600.0, max=1400.0)
+        
+        # Mock memory as named tuple
+        VirtualMemory = namedtuple('VirtualMemory', ['total', 'available', 'used', 'percent'])
+        mock_memory.return_value = VirtualMemory(
+            total=4096 * 1024 * 1024,  # 4GB
+            available=2048 * 1024 * 1024,  # 2GB available
+            used=2048 * 1024 * 1024,  # 2GB used
+            percent=42.3
+        )
+        
+        # Mock disk usage as named tuple
+        DiskUsage = namedtuple('DiskUsage', ['total', 'used', 'free', 'percent'])
+        mock_disk.return_value = DiskUsage(
+            total=32 * 1024 * 1024 * 1024,  # 32GB
+            used=15 * 1024 * 1024 * 1024,  # 15GB
+            free=17 * 1024 * 1024 * 1024,  # 17GB
+            percent=78.9
+        )
+        
+        # Mock disk partitions as named tuples
+        DiskPartition = namedtuple('DiskPartition', ['device', 'mountpoint', 'fstype'])
+        mock_partitions.return_value = [
+            DiskPartition(device='/dev/mmcblk0p2', mountpoint='/', fstype='ext4'),
+            DiskPartition(device='/dev/mmcblk0p1', mountpoint='/boot', fstype='vfat')
+        ]
+        
+        # Mock network interfaces with proper structure
+        NetInterface = namedtuple('NetInterface', ['address', 'family', 'netmask', 'broadcast'])
         mock_net.return_value = {
-            'eth0': [Mock(address='192.168.1.100', family=2)],
-            'wlan0': [Mock(address='192.168.1.101', family=2)]
+            'eth0': [NetInterface(address='192.168.1.100', family=2, netmask='255.255.255.0', broadcast='192.168.1.255')],
+            'wlan0': [NetInterface(address='192.168.1.101', family=2, netmask='255.255.255.0', broadcast='192.168.1.255')]
         }
         
         yield {
             'cpu': mock_cpu,
             'memory': mock_memory,
             'disk': mock_disk,
+            'partitions': mock_partitions,
+            'cpu_count': mock_cpu_count,
+            'cpu_freq': mock_cpu_freq,
             'boot': mock_boot,
             'net': mock_net
         }
