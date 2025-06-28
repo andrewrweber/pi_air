@@ -25,7 +25,7 @@ class TestBackgroundThreads:
         # Test that temperature_history is properly initialized
         assert hasattr(app, 'temperature_history')
         assert isinstance(app.temperature_history, deque)
-        assert app.temperature_history.maxlen == 120
+        assert app.temperature_history.maxlen == 120  # 10 min at 5-sec intervals
         
         # Test thread lock exists
         assert hasattr(app, 'temperature_lock')
@@ -47,23 +47,32 @@ class TestBackgroundThreads:
     @patch('app.database.insert_system_reading')
     @patch('psutil.cpu_percent')
     @patch('psutil.virtual_memory')
-    def test_sample_temperature_and_system_stats_success(self, mock_memory, mock_cpu_percent, 
-                                                       mock_insert, mock_get_temp):
+    @patch('psutil.disk_usage')
+    @patch('time.time')
+    def test_sample_temperature_and_system_stats_success(self, mock_time, mock_disk, mock_memory, 
+                                                        mock_cpu_percent, mock_insert, mock_get_temp):
         """Test successful system stats sampling"""
         # Setup mocks
         mock_get_temp.return_value = 56.7
-        mock_cpu_percent.return_value = 25.5
+        mock_cpu_percent.return_value = 25.5  # Note: cpu_percent(interval=1) blocks for 1 second
         
         mock_memory_obj = Mock()
         mock_memory_obj.percent = 42.3
         mock_memory.return_value = mock_memory_obj
+        
+        mock_disk_obj = Mock()
+        mock_disk_obj.percent = 85.2
+        mock_disk.return_value = mock_disk_obj
+        
+        # Mock time progression to trigger database write (30+ second gap)
+        mock_time.side_effect = [0, 35]  # last_db_write=0, current_time=35
         
         # Clear temperature history for clean test
         app.temperature_history.clear()
         
         # Mock time.sleep to control the infinite loop
         def side_effect_sleep(duration):
-            if side_effect_sleep.call_count >= 2:  # Stop after 2 iterations
+            if side_effect_sleep.call_count >= 1:  # Stop after 1 iteration
                 raise KeyboardInterrupt()
             side_effect_sleep.call_count += 1
         side_effect_sleep.call_count = 0
@@ -77,17 +86,32 @@ class TestBackgroundThreads:
             # Verify temperature was sampled
             mock_get_temp.assert_called()
             
-            # Verify latest temperature was updated
+            # Verify latest temperature was updated (only when temp is not None)
             assert app.latest_temperature == 56.7
             
-            # Verify temperature was added to history
+            # Verify temperature was added to history (always happens, even with None)
             assert len(app.temperature_history) > 0
+            
+            # Verify database write was called (temp is not None and 30+ sec elapsed)
+            mock_insert.assert_called_once()
+            
+            # Verify all required parameters were passed
+            call_args = mock_insert.call_args[1]
+            assert call_args['cpu_temp'] == 56.7
+            assert call_args['cpu_usage'] == 25.5
+            assert call_args['memory_usage'] == 42.3
+            assert call_args['disk_usage'] == 85.2
     
     @patch('app.get_cpu_temperature')
-    def test_sample_temperature_and_system_stats_temp_failure(self, mock_get_temp):
+    @patch('app.database.insert_system_reading')
+    @patch('time.time')
+    def test_sample_temperature_and_system_stats_temp_failure(self, mock_time, mock_insert, mock_get_temp):
         """Test system stats sampling when temperature fails"""
         # Setup mock to return None (temperature read failure)
         mock_get_temp.return_value = None
+        
+        # Mock time to trigger database write check (30+ second gap)
+        mock_time.side_effect = [0, 35]
         
         original_temp = app.latest_temperature
         app.temperature_history.clear()
@@ -108,11 +132,17 @@ class TestBackgroundThreads:
             # Verify temperature read was attempted
             mock_get_temp.assert_called()
             
-            # Latest temperature should remain unchanged when read fails
+            # Latest temperature should remain unchanged when read fails (only updates when temp is not None)
             assert app.latest_temperature == original_temp
             
-            # Database write should be skipped when temp is None (verified by no exception)
-            # The actual implementation skips DB write when temp is None
+            # Database write should be skipped when temp is None
+            mock_insert.assert_not_called()
+            
+            # But temperature history should still get the None entry
+            assert len(app.temperature_history) > 0
+            # The entry should contain None for temperature
+            timestamp, temp = app.temperature_history[-1]
+            assert temp is None
     
     @patch('app.database.insert_system_reading')
     @patch('app.get_cpu_temperature')
@@ -154,6 +184,7 @@ class TestBackgroundThreads:
                 assert call_args['cpu_temp'] == 55.0
                 assert call_args['cpu_usage'] == 30.0
                 assert call_args['memory_usage'] == 50.0
+                # Note: disk_usage should also be verified but requires adding mock_disk patch
     
     @patch('app.database.insert_system_reading')
     def test_database_write_error_handling(self, mock_insert):
