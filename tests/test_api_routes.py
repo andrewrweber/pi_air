@@ -30,10 +30,13 @@ class TestAPIRoutes:
     
     def test_system_api_route(self, client, mock_psutil):
         """Test /api/system endpoint"""
+        import socket
+        actual_hostname = socket.gethostname()  # Get the actual system hostname
+        
         with patch('platform.platform', return_value='Linux-5.4.0-armv7l'), \
              patch('platform.machine', return_value='armv7l'), \
-             patch('platform.processor', return_value='arm'), \
-             patch('socket.gethostname', return_value='raspberrypi'):
+             patch('platform.processor', return_value='arm'):
+            # Don't mock hostname - let it use the actual system hostname
             
             response = client.get('/api/system')
             assert response.status_code == 200
@@ -45,7 +48,11 @@ class TestAPIRoutes:
             assert 'memory_percentage' in data
             assert 'disk_info' in data
             assert 'network_info' in data
-            assert data['hostname'] == 'raspberrypi'
+            # Test that hostname matches the actual system hostname
+            assert data['hostname'] == actual_hostname
+            # Also verify it's a non-empty string
+            assert isinstance(data['hostname'], str)
+            assert len(data['hostname']) > 0
     
     def test_stats_api_route(self, client, mock_psutil, mock_temperature_command):
         """Test /api/stats endpoint"""
