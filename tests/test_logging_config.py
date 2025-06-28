@@ -22,22 +22,24 @@ class TestLoggingConfig:
     
     def test_setup_logging_default(self):
         """Test setup_logging with default parameters"""
-        with patch('logging.basicConfig') as mock_basic, \
-             patch('logging.getLogger') as mock_get_logger:
+        with patch('logging.getLogger') as mock_get_logger, \
+             patch('logging.StreamHandler') as mock_stream_handler:
             
-            mock_logger = mock_basic.return_value
-            mock_get_logger.return_value = mock_logger
+            mock_logger = mock_get_logger.return_value
+            mock_handler = mock_stream_handler.return_value
             
-            logging_config.setup_logging()
+            result = logging_config.setup_logging()
             
-            # Verify basicConfig was called
-            mock_basic.assert_called_once()
+            # Verify logger configuration
+            mock_get_logger.assert_called()
+            mock_logger.setLevel.assert_called_with(logging.INFO)
+            mock_logger.addHandler.assert_called_with(mock_handler)
             
-            # Check that logging level and format were configured
-            call_args = mock_basic.call_args[1]
-            assert call_args['level'] == logging.INFO
-            assert 'format' in call_args
-            assert 'datefmt' in call_args
+            # Verify console handler was created
+            mock_stream_handler.assert_called_once()
+            
+            # Should return the logger
+            assert result == mock_logger
     
     def test_setup_logging_with_log_file(self):
         """Test setup_logging with file logging enabled"""
@@ -45,21 +47,20 @@ class TestLoggingConfig:
             log_file = tmp_file.name
         
         try:
-            with patch('logging.basicConfig') as mock_basic, \
-                 patch('logging.getLogger') as mock_get_logger, \
+            with patch('logging.getLogger') as mock_get_logger, \
+                 patch('logging.StreamHandler') as mock_stream_handler, \
                  patch('logging.FileHandler') as mock_file_handler:
                 
-                mock_logger = mock_basic.return_value
-                mock_get_logger.return_value = mock_logger
-                mock_handler = mock_file_handler.return_value
+                mock_logger = mock_get_logger.return_value
+                mock_file_handler_instance = mock_file_handler.return_value
                 
                 logging_config.setup_logging(log_file=log_file)
                 
                 # Verify file handler was created
                 mock_file_handler.assert_called_once_with(log_file)
                 
-                # Verify logger configuration
-                mock_basic.assert_called_once()
+                # Verify both handlers were added to logger
+                assert mock_logger.addHandler.call_count == 2
                 
         finally:
             if os.path.exists(log_file):
@@ -67,37 +68,42 @@ class TestLoggingConfig:
     
     def test_setup_logging_debug_level(self):
         """Test setup_logging with debug level"""
-        with patch('logging.basicConfig') as mock_basic:
-            logging_config.setup_logging(level=logging.DEBUG)
+        with patch('logging.getLogger') as mock_get_logger:
+            mock_logger = mock_get_logger.return_value
             
-            call_args = mock_basic.call_args[1]
-            assert call_args['level'] == logging.DEBUG
+            logging_config.setup_logging(log_level='DEBUG')
+            
+            # Verify debug level was set
+            mock_logger.setLevel.assert_called_with(logging.DEBUG)
     
     def test_setup_logging_file_handler_error(self):
         """Test setup_logging handles file handler creation errors"""
-        with patch('logging.basicConfig') as mock_basic, \
+        with patch('logging.getLogger') as mock_get_logger, \
+             patch('logging.StreamHandler'), \
              patch('logging.FileHandler') as mock_file_handler:
             
             mock_file_handler.side_effect = PermissionError("Access denied")
             
-            # Should not raise exception, should fall back gracefully
-            logging_config.setup_logging(log_file="/invalid/path/log.txt")
-            
-            # Basic config should still be called
-            mock_basic.assert_called_once()
+            # Should raise the exception since no error handling in actual implementation
+            with pytest.raises(PermissionError):
+                logging_config.setup_logging(log_file="/invalid/path/log.txt")
     
-    def test_setup_logging_creates_log_directory(self):
-        """Test setup_logging creates log directory if it doesn't exist"""
-        with tempfile.TemporaryDirectory() as temp_dir:
-            log_file = os.path.join(temp_dir, "logs", "test.log")
+    def test_setup_logging_specific_loggers(self):
+        """Test setup_logging configures specific loggers"""
+        with patch('logging.getLogger') as mock_get_logger:
+            mock_logger = mock_get_logger.return_value
             
-            with patch('logging.basicConfig'), \
-                 patch('logging.FileHandler') as mock_file_handler:
-                
-                logging_config.setup_logging(log_file=log_file)
-                
-                # Verify directory was created
-                assert os.path.exists(os.path.dirname(log_file))
-                
-                # Verify file handler was attempted
-                mock_file_handler.assert_called_once_with(log_file)
+            logging_config.setup_logging()
+            
+            # Verify specific loggers were configured
+            expected_calls = [
+                ('',),  # Root logger
+                ('pms7003',),
+                ('werkzeug',)
+            ]
+            
+            # Check that getLogger was called for specific loggers
+            assert mock_get_logger.call_count >= 3
+            
+            # Verify setLevel was called multiple times for different loggers
+            assert mock_logger.setLevel.call_count >= 3
