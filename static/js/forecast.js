@@ -88,7 +88,7 @@ class ForecastManager {
                 }
             }
 
-            const data = await this.utils.fetchData('/api/air-quality-forecast-summary?days=3');
+            const data = await this.utils.fetchData('/api/air-quality-forecast-summary?days=2');
             if (!data || !data.forecast) {
                 console.warn('No forecast summary data available');
                 this.displayForecastError('No forecast data available');
