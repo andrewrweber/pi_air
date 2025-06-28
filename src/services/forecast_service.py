@@ -124,7 +124,11 @@ class ForecastService:
         cutoff_time = datetime.utcnow() - timedelta(hours=cache_hours)
         cutoff_str = cutoff_time.isoformat()
         
-        end_time = datetime.utcnow() + timedelta(hours=hours)
+        # Only get future forecast data
+        now = datetime.utcnow()
+        now_str = now.isoformat()
+        
+        end_time = now + timedelta(hours=hours)
         end_str = end_time.isoformat()
         
         try:
@@ -132,9 +136,10 @@ class ForecastService:
                 cursor = conn.execute('''
                     SELECT * FROM forecast_readings 
                     WHERE forecast_time > ? 
+                    AND forecast_for_time >= ?
                     AND forecast_for_time <= ?
                     ORDER BY forecast_for_time
-                ''', (cutoff_str, end_str))
+                ''', (cutoff_str, now_str, end_str))
                 
                 rows = cursor.fetchall()
                 if not rows:
@@ -185,9 +190,15 @@ class ForecastService:
         
         forecast_points = []
         forecast_time = datetime.utcnow().isoformat()
+        now = datetime.utcnow()
         
         for i, time_str in enumerate(times):
             try:
+                # Parse forecast time and skip if it's in the past
+                forecast_dt = datetime.fromisoformat(time_str.replace('Z', '+00:00'))
+                if forecast_dt <= now:
+                    continue
+                
                 # Get pollutant values (None if missing)
                 pm25 = hourly.get('pm2_5', [None] * len(times))[i]
                 pm10 = hourly.get('pm10', [None] * len(times))[i]
@@ -226,7 +237,7 @@ class ForecastService:
                 
                 forecast_points.append(forecast_point)
                 
-            except (IndexError, ValueError) as e:
+            except (IndexError, ValueError, TypeError) as e:
                 logger.warning(f"Error parsing forecast point {i}: {e}")
                 continue
         
