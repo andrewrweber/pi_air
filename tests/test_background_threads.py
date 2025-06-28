@@ -65,8 +65,17 @@ class TestBackgroundThreads:
         mock_disk_obj.percent = 85.2
         mock_disk.return_value = mock_disk_obj
         
-        # Mock time: iter1=0 (no write: 0-0<30), iter2=35 (write: 35-0>=30)
-        mock_time.side_effect = [0, 35, 35, 35, 35, 35]  # Simplified - just the essential calls
+        # Add debug tracking to time.time() calls
+        time_call_count = [0]
+        time_values = [0, 35, 35, 35, 35, 35, 35, 35, 35, 35]
+        
+        def debug_time():
+            result = time_values[min(time_call_count[0], len(time_values) - 1)]
+            print(f"DEBUG: time.time() call #{time_call_count[0] + 1} returning {result}")
+            time_call_count[0] += 1
+            return result
+        
+        mock_time.side_effect = debug_time
         
         # Clear temperature history for clean test
         app.temperature_history.clear()
@@ -77,6 +86,7 @@ class TestBackgroundThreads:
             
             # Mock time.sleep to control the infinite loop - run two iterations
             def side_effect_sleep(duration):
+                print(f"DEBUG: time.sleep({duration}) call #{side_effect_sleep.call_count + 1}")
                 if side_effect_sleep.call_count >= 2:  # Stop after 2 iterations
                     raise KeyboardInterrupt()
                 side_effect_sleep.call_count += 1
@@ -86,7 +96,14 @@ class TestBackgroundThreads:
                 try:
                     app.sample_temperature_and_system_stats()
                 except KeyboardInterrupt:
+                    print("DEBUG: KeyboardInterrupt caught, stopping loop")
                     pass  # Expected to stop the loop
+                
+                print(f"DEBUG: time.time() was called {time_call_count[0]} times")
+                print(f"DEBUG: insert_system_reading call count: {mock_insert.call_count}")
+                print(f"DEBUG: insert_system_reading called: {mock_insert.called}")
+                if mock_insert.call_count > 0:
+                    print(f"DEBUG: insert_system_reading call args: {mock_insert.call_args}")
                 
                 # Verify temperature was sampled
                 mock_get_temp.assert_called()
