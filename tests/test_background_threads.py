@@ -224,13 +224,14 @@ class TestBackgroundThreads:
             timestamp, temp = app.temperature_history[-1]
             assert temp is None
     
-    @patch('database.insert_system_reading')
     @patch('app.get_cpu_temperature')
+    @patch('database.insert_system_reading')
     @patch('psutil.cpu_percent')
     @patch('psutil.virtual_memory')
     @patch('psutil.disk_usage')
-    def test_database_write_interval(self, mock_disk, mock_memory, mock_cpu_percent, 
-                                   mock_get_temp, mock_insert):
+    @patch('time.time')
+    def test_database_write_interval(self, mock_time, mock_disk, mock_memory, mock_cpu_percent, 
+                                   mock_insert, mock_get_temp):
         """Test that database writes happen at correct intervals"""
         mock_get_temp.return_value = 55.0
         mock_cpu_percent.return_value = 30.0
@@ -243,78 +244,83 @@ class TestBackgroundThreads:
         mock_disk_obj.percent = 75.0
         mock_disk.return_value = mock_disk_obj
         
-        # Mock time to control write intervals  
-        with patch('time.time') as mock_time:
-            # Apply the same working pattern: first call gets 0, second gets 35
-            mock_time.side_effect = [0, 35, 35, 35]
+        # Apply the exact same working pattern as the successful test
+        mock_time.side_effect = [0, 35, 35, 35]
+        
+        app.temperature_history.clear()
+        
+        with patch('datetime.datetime') as mock_datetime:
+            mock_datetime.now.return_value.isoformat.return_value = "2023-01-01T12:00:00"
             
-            # Mock datetime separately to avoid time.time() conflicts
-            with patch('datetime.datetime') as mock_datetime:
-                mock_datetime.now.return_value.isoformat.return_value = "2023-01-01T12:00:00"
+            def side_effect_sleep(duration):
+                if side_effect_sleep.call_count >= 2:  # Run 2 full iterations to trigger write
+                    raise KeyboardInterrupt()
+                side_effect_sleep.call_count += 1
+            side_effect_sleep.call_count = 0
+            
+            with patch('time.sleep', side_effect=side_effect_sleep):
+                try:
+                    app.sample_temperature_and_system_stats()
+                except KeyboardInterrupt:
+                    pass  # Expected to stop the loop
                 
-                # Mock time.sleep to control the infinite loop
-                def side_effect_sleep(duration):
-                    if side_effect_sleep.call_count >= 2:  # Stop after 2 iterations to trigger DB write
-                        raise KeyboardInterrupt()
-                    side_effect_sleep.call_count += 1
-                side_effect_sleep.call_count = 0
+                # Database insert should have been called
+                mock_insert.assert_called()
                 
-                with patch('time.sleep', side_effect=side_effect_sleep):
-                    try:
-                        app.sample_temperature_and_system_stats()
-                    except KeyboardInterrupt:
-                        pass  # Expected to stop the loop
-                    
-                    # Database insert should have been called
-                    mock_insert.assert_called()
-                    
-                    # Verify correct parameters were passed
-                    call_args = mock_insert.call_args[1]
-                    assert call_args['cpu_temp'] == 55.0
-                    assert call_args['cpu_usage'] == 30.0
-                    assert call_args['memory_usage'] == 50.0
-                    assert call_args['disk_usage'] == 75.0
+                # Verify correct parameters were passed
+                call_args = mock_insert.call_args[1]
+                assert call_args['cpu_temp'] == 55.0
+                assert call_args['cpu_usage'] == 30.0
+                assert call_args['memory_usage'] == 50.0
+                assert call_args['disk_usage'] == 75.0
     
+    @patch('app.get_cpu_temperature')
     @patch('database.insert_system_reading')
-    def test_database_write_error_handling(self, mock_insert):
+    @patch('psutil.cpu_percent')
+    @patch('psutil.virtual_memory')
+    @patch('psutil.disk_usage')
+    @patch('time.time')
+    def test_database_write_error_handling(self, mock_time, mock_disk, mock_memory, 
+                                         mock_cpu_percent, mock_insert, mock_get_temp):
         """Test error handling when database write fails"""
         # Setup mock to raise exception
         mock_insert.side_effect = Exception("Database write failed")
         
-        with patch('app.get_cpu_temperature', return_value=55.0), \
-             patch('psutil.cpu_percent', return_value=25.0), \
-             patch('psutil.virtual_memory') as mock_memory, \
-             patch('psutil.disk_usage') as mock_disk, \
-             patch('time.time', side_effect=[0, 35, 35, 35]):  # Apply the same working pattern
+        # Setup mocks with same pattern as successful test
+        mock_get_temp.return_value = 55.0
+        mock_cpu_percent.return_value = 25.0
+        
+        mock_memory_obj = Mock()
+        mock_memory_obj.percent = 40.0
+        mock_memory.return_value = mock_memory_obj
+        
+        mock_disk_obj = Mock()
+        mock_disk_obj.percent = 60.0
+        mock_disk.return_value = mock_disk_obj
+        
+        # Apply the exact same working pattern as the successful test
+        mock_time.side_effect = [0, 35, 35, 35]
+        
+        app.temperature_history.clear()
+        
+        with patch('datetime.datetime') as mock_datetime:
+            mock_datetime.now.return_value.isoformat.return_value = "2023-01-01T12:00:00"
             
-            mock_memory_obj = Mock()
-            mock_memory_obj.percent = 40.0
-            mock_memory.return_value = mock_memory_obj
+            def side_effect_sleep(duration):
+                if side_effect_sleep.call_count >= 2:  # Run 2 full iterations to trigger write
+                    raise KeyboardInterrupt()
+                side_effect_sleep.call_count += 1
+            side_effect_sleep.call_count = 0
             
-            mock_disk_obj = Mock()
-            mock_disk_obj.percent = 60.0
-            mock_disk.return_value = mock_disk_obj
-            
-            # Mock datetime separately to avoid time.time() conflicts
-            with patch('datetime.datetime') as mock_datetime:
-                mock_datetime.now.return_value.isoformat.return_value = "2023-01-01T12:00:00"
+            with patch('time.sleep', side_effect=side_effect_sleep):
+                # Should not raise exception even if database write fails
+                try:
+                    app.sample_temperature_and_system_stats()
+                except KeyboardInterrupt:
+                    pass  # Expected to stop the loop
                 
-                # Mock time.sleep to control the infinite loop
-                def side_effect_sleep(duration):
-                    if side_effect_sleep.call_count >= 2:  # Stop after 2 iterations to trigger DB write
-                        raise KeyboardInterrupt()
-                    side_effect_sleep.call_count += 1
-                side_effect_sleep.call_count = 0
-                
-                with patch('time.sleep', side_effect=side_effect_sleep):
-                    # Should not raise exception even if database write fails
-                    try:
-                        app.sample_temperature_and_system_stats()
-                    except KeyboardInterrupt:
-                        pass  # Expected to stop the loop
-                    
-                    # Database insert should have been attempted
-                    mock_insert.assert_called()
+                # Database insert should have been attempted
+                mock_insert.assert_called()
     
     def test_temperature_history_maxlen_behavior(self):
         """Test that temperature history respects maxlen limit"""
