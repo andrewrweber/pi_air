@@ -239,26 +239,39 @@ function formatDayName(date) {
  * @returns {string} Formatted time string
  */
 function formatTimeForChart(date, range) {
-    if (range === '72h') {
-        // For 3-day view, show day and hour
+    const hour = date.toLocaleTimeString('en-US', { 
+        hour: 'numeric',
+        hour12: true,
+        timeZone: 'America/Los_Angeles'
+    });
+    
+    if (range === '12h') {
+        // For 12-hour view, show time only
+        return hour;
+    } else if (range === '24h' || range === '48h' || range === '72h') {
+        // For longer ranges, show day and hour
         const day = date.toLocaleDateString('en-US', { 
             weekday: 'short',
             timeZone: 'America/Los_Angeles'
         });
-        const hour = date.toLocaleTimeString('en-US', { 
-            hour: 'numeric', 
-            hour12: true,
-            timeZone: 'America/Los_Angeles'
-        });
-        return `${day} ${hour}`;
-    } else {
-        // For shorter ranges, show time only
-        return date.toLocaleTimeString('en-US', { 
+        
+        // For midnight hours, emphasize the day transition
+        const hourNum = date.toLocaleString('en-US', {
             hour: 'numeric',
-            minute: '2-digit',
-            hour12: true,
+            hour12: false,
             timeZone: 'America/Los_Angeles'
         });
+        
+        if (hourNum === '0') {
+            // Midnight - show day prominently
+            return `${day} 12 AM`;
+        } else {
+            // Other hours - show abbreviated format
+            return `${day.slice(0, 3)} ${hour}`;
+        }
+    } else {
+        // Fallback: show time only
+        return hour;
     }
 }
 

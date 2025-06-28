@@ -296,7 +296,9 @@ class ForecastManager {
                             text: 'Time'
                         },
                         ticks: {
-                            maxTicksLimit: range === '72h' ? 12 : 8
+                            maxTicksLimit: range === '72h' ? 12 : (range === '48h' ? 10 : 8),
+                            maxRotation: 45,
+                            minRotation: 0
                         }
                     },
                     y: {
