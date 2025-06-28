@@ -6,7 +6,7 @@ import pytest
 import tempfile
 import os
 import logging
-from unittest.mock import patch, mock_open
+from unittest.mock import patch, mock_open, Mock
 from pathlib import Path
 import sys
 
@@ -25,21 +25,35 @@ class TestLoggingConfig:
         with patch('logging.getLogger') as mock_get_logger, \
              patch('logging.StreamHandler') as mock_stream_handler:
             
-            mock_logger = mock_get_logger.return_value
+            # Create separate mock instances for different loggers
+            mock_root_logger = Mock()
+            mock_pms_logger = Mock()
+            mock_werkzeug_logger = Mock()
+            
+            # Configure getLogger to return specific mocks based on call
+            def get_logger_side_effect(name=''):
+                if name == '':
+                    return mock_root_logger
+                elif name == 'pms7003':
+                    return mock_pms_logger
+                elif name == 'werkzeug':
+                    return mock_werkzeug_logger
+                return Mock()
+            
+            mock_get_logger.side_effect = get_logger_side_effect
             mock_handler = mock_stream_handler.return_value
             
             result = logging_config.setup_logging()
             
-            # Verify logger configuration
-            mock_get_logger.assert_called()
-            mock_logger.setLevel.assert_called_with(logging.INFO)
-            mock_logger.addHandler.assert_called_with(mock_handler)
+            # Verify root logger configuration
+            mock_root_logger.setLevel.assert_called_with(logging.INFO)
+            mock_root_logger.addHandler.assert_called_with(mock_handler)
             
             # Verify console handler was created
             mock_stream_handler.assert_called_once()
             
-            # Should return the logger
-            assert result == mock_logger
+            # Should return the root logger
+            assert result == mock_root_logger
     
     def test_setup_logging_with_log_file(self):
         """Test setup_logging with file logging enabled"""
@@ -69,12 +83,27 @@ class TestLoggingConfig:
     def test_setup_logging_debug_level(self):
         """Test setup_logging with debug level"""
         with patch('logging.getLogger') as mock_get_logger:
-            mock_logger = mock_get_logger.return_value
+            # Create separate mock instances for different loggers
+            mock_root_logger = Mock()
+            mock_pms_logger = Mock()
+            mock_werkzeug_logger = Mock()
+            
+            # Configure getLogger to return specific mocks based on call
+            def get_logger_side_effect(name=''):
+                if name == '':
+                    return mock_root_logger
+                elif name == 'pms7003':
+                    return mock_pms_logger
+                elif name == 'werkzeug':
+                    return mock_werkzeug_logger
+                return Mock()
+            
+            mock_get_logger.side_effect = get_logger_side_effect
             
             logging_config.setup_logging(log_level='DEBUG')
             
-            # Verify debug level was set
-            mock_logger.setLevel.assert_called_with(logging.DEBUG)
+            # Verify debug level was set on root logger
+            mock_root_logger.setLevel.assert_called_with(logging.DEBUG)
     
     def test_setup_logging_file_handler_error(self):
         """Test setup_logging handles file handler creation errors"""
