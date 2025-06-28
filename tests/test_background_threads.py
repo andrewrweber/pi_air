@@ -230,31 +230,23 @@ class TestBackgroundThreads:
     @patch('psutil.virtual_memory')
     @patch('psutil.disk_usage')
     @patch('time.time')
-    def test_database_write_interval(self, mock_time, mock_disk, mock_memory, mock_cpu_percent, 
-                                   mock_insert, mock_get_temp):
+    def test_database_write_interval(self, mock_time, mock_disk, mock_memory, 
+                                   mock_cpu_percent, mock_insert, mock_get_temp):
         """Test that database writes happen at correct intervals"""
-        mock_get_temp.return_value = 55.0
-        mock_cpu_percent.return_value = 30.0
+        # Copy EXACT pattern from working test
+        mock_get_temp.return_value = 55.0  # Changed from 56.7
+        mock_cpu_percent.return_value = 30.0  # Changed from 25.5
         
         mock_memory_obj = Mock()
-        mock_memory_obj.percent = 50.0
+        mock_memory_obj.percent = 50.0  # Changed from 42.3
         mock_memory.return_value = mock_memory_obj
         
         mock_disk_obj = Mock()
-        mock_disk_obj.percent = 75.0
+        mock_disk_obj.percent = 75.0  # Changed from 85.2
         mock_disk.return_value = mock_disk_obj
         
-        # Add comprehensive debugging like successful test
-        time_call_count = [0]
-        time_values = [0, 35, 35, 35, 35, 35]
-        
-        def debug_time():
-            result = time_values[min(time_call_count[0], len(time_values) - 1)]
-            print(f"DEBUG: time.time() call #{time_call_count[0] + 1} returning {result}")
-            time_call_count[0] += 1
-            return result
-            
-        mock_time.side_effect = debug_time
+        # Use exact same time mocking as working test
+        mock_time.side_effect = [0, 35, 35, 35, 35, 35]
         
         app.temperature_history.clear()
         
@@ -262,8 +254,7 @@ class TestBackgroundThreads:
             mock_datetime.now.return_value.isoformat.return_value = "2023-01-01T12:00:00"
             
             def side_effect_sleep(duration):
-                print(f"DEBUG: time.sleep({duration}) call #{side_effect_sleep.call_count + 1}")
-                if side_effect_sleep.call_count >= 2:  # Run 2 full iterations to trigger write
+                if side_effect_sleep.call_count >= 2:  # Stop after 2 iterations
                     raise KeyboardInterrupt()
                 side_effect_sleep.call_count += 1
             side_effect_sleep.call_count = 0
@@ -272,31 +263,31 @@ class TestBackgroundThreads:
                 try:
                     app.sample_temperature_and_system_stats()
                 except KeyboardInterrupt:
-                    print("DEBUG: KeyboardInterrupt caught")
                     pass  # Expected to stop the loop
                 
-                print(f"DEBUG: time.time() was called {time_call_count[0]} times")
-                print(f"DEBUG: insert_system_reading call count: {mock_insert.call_count}")
-                print(f"DEBUG: insert_system_reading called: {mock_insert.called}")
-                print(f"DEBUG: get_cpu_temperature call count: {mock_get_temp.call_count}")
-                print(f"DEBUG: get_cpu_temperature return value: {mock_get_temp.return_value}")
-                print(f"DEBUG: app.latest_temperature: {app.latest_temperature}")
+                # Add back all assertions that were originally working
+                assert mock_get_temp.call_count > 0, "get_cpu_temperature should be called"
                 
-                if mock_insert.call_count > 0:
-                    print("SUCCESS: Database write happened!")
-                    mock_insert.assert_called()
-                    
-                    # Verify correct parameters were passed
-                    call_args = mock_insert.call_args[1]
-                    assert call_args['cpu_temp'] == 55.0
-                    assert call_args['cpu_usage'] == 30.0
-                    assert call_args['memory_usage'] == 50.0
-                    assert call_args['disk_usage'] == 75.0
+                # Check if database write happened
+                if mock_insert.call_count == 0:
+                    print("DEBUGGING: Database write did not happen")
+                    print(f"mock_get_temp.call_count: {mock_get_temp.call_count}")
+                    print(f"mock_insert.call_count: {mock_insert.call_count}")
+                    print(f"app.latest_temperature: {app.latest_temperature}")
                 else:
-                    print("ERROR: Database write did NOT happen!")
-                    print("This test should be identical to the working test but something is different")
-                    # Still fail the test but with more info
-                    mock_insert.assert_called()
+                    print(f"SUCCESS: Database write happened {mock_insert.call_count} times!")
+                
+                mock_insert.assert_called_once()
+                
+                # Verify all required parameters were passed
+                call_args = mock_insert.call_args[1]
+                assert call_args['cpu_temp'] == 55.0
+                assert call_args['cpu_usage'] == 30.0
+                assert call_args['memory_usage'] == 50.0
+                assert call_args['disk_usage'] == 75.0
+                
+                assert app.latest_temperature == 55.0
+                assert len(app.temperature_history) > 0
     
     @patch('app.get_cpu_temperature')
     @patch('database.insert_system_reading')
