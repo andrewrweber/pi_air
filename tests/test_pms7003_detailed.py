@@ -264,23 +264,49 @@ class TestPMS7003Detailed:
         assert sensor._linear_scale(12.1, 12.1, 35.4, 51, 100) == 51
         assert sensor._linear_scale(35.4, 12.1, 35.4, 51, 100) == 100
     
+    @patch('serial.Serial')
     @patch('threading.Thread')
-    def test_read_loop_thread_management(self, mock_thread):
-        """Test read loop thread management"""
-        sensor = pms7003.PMS7003()
-        sensor.serial_conn = Mock()
-        sensor.running = True
+    def test_start_creates_thread(self, mock_thread, mock_serial):
+        """Test that start() creates and starts background thread"""
+        mock_conn = Mock()
+        mock_serial.return_value = mock_conn
         
-        # Mock thread to prevent actual threading
         mock_thread_instance = Mock()
         mock_thread.return_value = mock_thread_instance
         
-        with patch.object(sensor, '_read_frame', return_value=None):
-            # Start read loop
-            sensor._read_loop()
+        sensor = pms7003.PMS7003()
+        result = sensor.start()
+        
+        # Verify thread was created and started
+        assert result is True
+        mock_thread.assert_called_once_with(target=sensor._read_loop)
+        mock_thread_instance.start.assert_called_once()
+        assert sensor.running is True
+    
+    def test_read_loop_data_processing(self):
+        """Test read loop data processing without infinite loop"""
+        sensor = pms7003.PMS7003()
+        sensor.serial = Mock()
+        
+        # Mock a single successful frame read
+        test_frame = b'BM' + b'\\x00' * 30  # Simplified frame
+        with patch.object(sensor, '_read_frame', return_value=test_frame), \
+             patch.object(sensor, '_parse_data', return_value={'pm2_5': 25}) as mock_parse, \
+             patch('time.time', return_value=1234567890), \
+             patch('time.sleep', side_effect=KeyboardInterrupt):  # Stop after one iteration
             
-            # Should handle running state properly
-            assert sensor.running is True
+            sensor.running = True
+            
+            try:
+                sensor._read_loop()
+            except KeyboardInterrupt:
+                pass  # Expected to stop the loop
+            
+            # Verify data processing was attempted
+            mock_parse.assert_called_once_with(test_frame)
+            
+            # Verify latest_data was updated
+            assert sensor.latest_data == {'pm2_5': 25}
     
     def test_get_data_with_available_data(self):
         """Test get_data when data is available"""
