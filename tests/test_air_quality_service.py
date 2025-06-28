@@ -224,14 +224,15 @@ class TestAirQualityService:
             'pm1_0': 5, 'pm2_5': 12, 'pm10': 18, 'aqi': 50, 'aqi_level': 'Good'
         }
         
-        # Mock time progression
-        mock_time.side_effect = [
-            0,      # Initial last_write_time
-            0,      # Initial last_cleanup_time  
+        # Mock time progression - need to track the call index
+        time_values = [
+            0,      # Initial last_write_time (called in __init__)
+            0,      # Initial last_cleanup_time (called in __init__)
             1,      # First loop iteration
-            61,     # Second iteration (61 seconds later - triggers write)
-            3661    # Third iteration (3661 seconds later - triggers cleanup)
+            35,     # Second iteration (35 seconds later - triggers write)
+            3665    # Third iteration (3665 seconds later - triggers cleanup)
         ]
+        mock_time.side_effect = time_values
         
         with patch.object(monitor, '_write_averaged_data') as mock_write, \
              patch.object(monitor, '_cleanup_old_data') as mock_cleanup, \
@@ -240,8 +241,8 @@ class TestAirQualityService:
             # Run a few iterations
             monitor.running = True
             
-            # Simulate a few loop iterations
-            for _ in range(3):
+            # Simulate the monitor loop logic with controlled time values
+            for i in range(3):
                 if not monitor.running:
                     break
                 
@@ -250,7 +251,8 @@ class TestAirQualityService:
                 if reading:
                     monitor.readings_buffer.append(reading)
                 
-                current_time = mock_time.return_value
+                # Get current time by calling the mock (which returns the next side_effect value)
+                current_time = mock_time()
                 
                 # Check write timing (every 30 seconds - SAMPLE_INTERVAL)
                 if current_time - monitor.last_write_time >= 30:
@@ -261,10 +263,6 @@ class TestAirQualityService:
                 if current_time - monitor.last_cleanup_time >= 3600:
                     monitor._cleanup_old_data()
                     monitor.last_cleanup_time = current_time
-                
-                # Stop after some iterations to prevent infinite loop
-                if _ >= 2:
-                    break
             
             # Verify write and cleanup were called based on timing
             assert mock_write.call_count >= 1
