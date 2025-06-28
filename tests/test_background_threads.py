@@ -175,6 +175,13 @@ class TestBackgroundThreads:
                     assert call_args['disk_usage'] == 85.2
                     print("SUCCESS: All database parameters verified!")
                 
+                # Debug: Compare with failing test
+                print(f"WORKING TEST DEBUG:")
+                print(f"  mock_get_temp.call_count: {mock_get_temp.call_count}")
+                print(f"  mock_insert.call_count: {mock_insert.call_count}")
+                print(f"  app.latest_temperature: {app.latest_temperature}")
+                print(f"  len(app.temperature_history): {len(app.temperature_history)}")
+                
                 # Add back other assertions that were originally failing
                 assert app.latest_temperature == 56.7, f"Expected latest_temperature=56.7, got {app.latest_temperature}"
                 assert len(app.temperature_history) > 0, "Temperature history should have entries"
