@@ -86,7 +86,7 @@ pip install -r requirements.txt
 
 3. Initialize the database:
 ```bash
-python -c "from src.database import init_db; init_db()"
+python -c "from src.database import init_database; init_database()"
 ```
 
 4. Install systemd services (automatically detects user and paths):

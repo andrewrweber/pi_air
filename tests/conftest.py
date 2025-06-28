@@ -28,7 +28,7 @@ def client():
     # Mock the database path
     with patch('database.DB_PATH', test_db_path):
         # Initialize test database
-        database.init_db()
+        database.init_database()
         
         # Configure Flask app for testing
         app.app.config['TESTING'] = True
@@ -50,7 +50,7 @@ def test_db():
         test_db_path = tmp_db.name
     
     with patch('database.DB_PATH', test_db_path):
-        database.init_db()
+        database.init_database()
         yield test_db_path
     
     # Clean up
@@ -144,6 +144,14 @@ def mock_temperature_command():
         mock_result.stdout = "temp=56.7'C\n"
         mock_result.returncode = 0
         mock_run.return_value = mock_result
+        
+        # Verify the mock is called with correct command and timeout
+        def verify_call(*args, **kwargs):
+            assert args[0] == ['/usr/bin/vcgencmd', 'measure_temp']
+            assert kwargs.get('timeout', None) == 2
+            return mock_result
+        
+        mock_run.side_effect = verify_call
         yield mock_run
 
 
