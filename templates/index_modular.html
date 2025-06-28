@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>Pi Air Monitor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='favicon-16x16.png') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>🖥️ Pi Air Monitor</h1>
+        
+        <!-- Tab Navigation -->
+        <div class="tab-navigation">
+            <button class="tab-button active" data-tab="hardware">Hardware Monitor</button>
+            <button class="tab-button" data-tab="air-quality">Air Quality</button>
+        </div>
+        
+        <!-- Hardware Monitor Tab -->
+        <div id="hardware-tab" class="tab-content active">
+            <!-- Real-time Stats -->
+            <div class="card">
+                <h2>📊 Real-time Stats</h2>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <span class="stat-label">CPU Usage</span>
+                        <span class="stat-value" id="cpu-usage">--</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Memory Usage</span>
+                        <span class="stat-value" id="memory-usage">--</span>
+                        <div class="stat-detail" id="memory-detail">-- / --</div>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">CPU Temperature</span>
+                        <span class="stat-value" id="cpu-temp">--</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- CPU Temperature History -->
+            <div class="card">
+                <h2>🌡️ CPU Temperature History</h2>
+                <div class="chart-controls">
+                    <button id="temp-realtime-btn" class="control-button active" onclick="showTemperatureData('realtime')">Real-time</button>
+                    <button id="temp-database-btn" class="control-button" onclick="showTemperatureData('database')">24 Hours</button>
+                </div>
+                <div class="chart-container">
+                    <canvas id="temperatureChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- System Metrics History -->
+            <div class="card">
+                <h2>📈 System Metrics (24h)</h2>
+                <div class="metric-toggles">
+                    <label><input type="checkbox" id="show-cpu-usage" checked> CPU Usage</label>
+                    <label><input type="checkbox" id="show-memory-usage" checked> Memory Usage</label>
+                    <label><input type="checkbox" id="show-disk-usage" checked> Disk Usage</label>
+                    <label><input type="checkbox" id="show-cpu-temp" checked> CPU Temp</label>
+                </div>
+                <div class="chart-container">
+                    <canvas id="systemMetricsChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- System Information -->
+            <div class="card">
+                <h2>ℹ️ System Information</h2>
+                <div id="system-info" class="info-grid">
+                    <div class="info-placeholder">Loading system information...</div>
+                </div>
+            </div>
+            
+            <!-- Network Information -->
+            <div class="card">
+                <h2>🌐 Network Information</h2>
+                <div id="network-info" class="info-grid">
+                    <div class="info-placeholder">Loading network information...</div>
+                </div>
+            </div>
+            
+            <!-- Disk Usage -->
+            <div class="card">
+                <h2>💾 Disk Usage</h2>
+                <div id="disk-info">
+                    <div class="info-placeholder">Loading disk information...</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Air Quality Tab -->
+        <div id="air-quality-tab" class="tab-content">
+            <!-- Current Air Quality -->
+            <div class="card">
+                <h2>🌍 Current Air Quality</h2>
+                <div class="air-quality-display">
+                    <div class="aqi-main">
+                        <div class="aqi-value" id="current-aqi">--</div>
+                        <div class="aqi-label" id="aqi-level">Loading...</div>
+                    </div>
+                    <div class="particle-readings">
+                        <div class="particle-item">
+                            <span class="particle-label">PM1.0</span>
+                            <span class="particle-value" id="pm1-value">--</span>
+                            <span class="particle-unit">μg/m³</span>
+                        </div>
+                        <div class="particle-item">
+                            <span class="particle-label">PM2.5</span>
+                            <span class="particle-value" id="pm25-value">--</span>
+                            <span class="particle-unit">μg/m³</span>
+                        </div>
+                        <div class="particle-item">
+                            <span class="particle-label">PM10</span>
+                            <span class="particle-value" id="pm10-value">--</span>
+                            <span class="particle-unit">μg/m³</span>
+                        </div>
+                    </div>
+                    <div class="last-update" id="last-air-update">No sensor data available</div>
+                </div>
+            </div>
+            
+            <!-- Lowest Air Quality (24h) -->
+            <div class="card">
+                <h2>⚠️ Lowest Air Quality (24h)</h2>
+                <div class="air-quality-display">
+                    <div class="aqi-main">
+                        <div class="aqi-value" id="worst-aqi-value">--</div>
+                        <div class="aqi-label" id="worst-aqi-level">--</div>
+                    </div>
+                    <div class="particle-readings">
+                        <div class="particle-item">
+                            <span class="particle-label">PM1.0</span>
+                            <span class="particle-value" id="worst-pm1-value">--</span>
+                            <span class="particle-unit">μg/m³</span>
+                        </div>
+                        <div class="particle-item">
+                            <span class="particle-label">PM2.5</span>
+                            <span class="particle-value" id="worst-pm25-value">--</span>
+                            <span class="particle-unit">μg/m³</span>
+                        </div>
+                        <div class="particle-item">
+                            <span class="particle-label">PM10</span>
+                            <span class="particle-value" id="worst-pm10-value">--</span>
+                            <span class="particle-unit">μg/m³</span>
+                        </div>
+                    </div>
+                    <div class="worst-time" id="worst-time">No data available</div>
+                </div>
+            </div>
+            
+            <!-- Particle Concentrations Chart -->
+            <div class="card">
+                <h2 id="particles-chart-title">📊 Particle Concentrations (24 hours, 15-minute intervals)</h2>
+                <div class="chart-controls">
+                    <button id="particles-1h-btn" class="control-button" onclick="showParticlesData('1h')">1h</button>
+                    <button id="particles-6h-btn" class="control-button" onclick="showParticlesData('6h')">6h</button>
+                    <button id="particles-24h-btn" class="control-button active" onclick="showParticlesData('24h')">24h</button>
+                </div>
+                <div class="chart-container">
+                    <canvas id="particlesChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- Air Quality Index Chart -->
+            <div class="card">
+                <h2 id="aqi-chart-title">🌡️ Air Quality Index (24 hours, 15-minute intervals)</h2>
+                <div class="chart-controls">
+                    <button id="aqi-1h-btn" class="control-button" onclick="showAQIData('1h')">1h</button>
+                    <button id="aqi-6h-btn" class="control-button" onclick="showAQIData('6h')">6h</button>
+                    <button id="aqi-24h-btn" class="control-button active" onclick="showAQIData('24h')">24h</button>
+                </div>
+                <div class="chart-container">
+                    <canvas id="aqiChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Load JavaScript modules in correct order -->
+    <script src="{{ url_for('static', filename='js/config.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/utils.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/hardware.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/air-quality.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    
+    <!-- Error toast styles -->
+    <style>
+        .error-toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #c5162a;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            opacity: 0;
+            transform: translateY(50px);
+            transition: opacity 0.3s, transform 0.3s;
+        }
+        
+        .error-toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .info-placeholder {
+            color: #666;
+            font-style: italic;
+            padding: 20px;
+            text-align: center;
+        }
+    </style>
+</body>
+</html>

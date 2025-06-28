@@ -555,4 +555,42 @@ h1 {
         align-items: center;
         gap: 10px;
     }
+    
+    .error-toast {
+        bottom: 10px;
+        right: 10px;
+        left: 10px;
+        max-width: none;
+        font-size: 14px;
+    }
+}
+
+/* Error Toast Notification */
+.error-toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background-color: #c5162a;
+    color: white;
+    padding: 15px 20px;
+    border-radius: 5px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    opacity: 0;
+    transform: translateY(50px);
+    transition: opacity 0.3s, transform 0.3s;
+    max-width: 90%;
+}
+
+.error-toast.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Info placeholder text */
+.info-placeholder {
+    color: #666;
+    font-style: italic;
+    padding: 20px;
+    text-align: center;
 }

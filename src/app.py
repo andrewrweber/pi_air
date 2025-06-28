@@ -251,7 +251,9 @@ def get_system_info() -> Dict[str, Any]:
 @app.route('/')
 def index():
     """Serve the main dashboard page"""
-    return render_template('index.html')
+    # Use modular template if USE_MODULAR env var is set
+    template = 'index_modular.html' if os.environ.get('USE_MODULAR') else 'index.html'
+    return render_template(template)
 
 @app.route('/api/system')
 def system_api():
