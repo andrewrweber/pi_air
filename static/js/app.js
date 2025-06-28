@@ -4,7 +4,7 @@
 
 class PiAirMonitorApp {
     constructor() {
-        this.currentTab = 'hardware';
+        this.currentTab = 'air-quality';  // Default to air-quality tab like original
         this.hardwareMonitor = null;
         this.airQualityMonitor = null;
         this.isInitialized = false;
@@ -31,8 +31,8 @@ class PiAirMonitorApp {
             this.hardwareMonitor.start();
             this.airQualityMonitor.start();
             
-            // Show initial tab
-            this.showTab('hardware');
+            // Show initial tab (air-quality is default)
+            this.showTab('air-quality');
             
             // Set up global error handling
             this.setupErrorHandling();
