@@ -66,7 +66,8 @@ class TestBackgroundThreads:
         mock_disk.return_value = mock_disk_obj
         
         # Mock time progression to trigger database write (30+ second gap)
-        mock_time.side_effect = [0, 35]  # last_db_write=0, current_time=35
+        # Need multiple values since time.time() is called by logging system too
+        mock_time.side_effect = [0, 35] + [35] * 10  # Provide extra values for logging calls
         
         # Clear temperature history for clean test
         app.temperature_history.clear()
@@ -112,7 +113,8 @@ class TestBackgroundThreads:
         mock_get_temp.return_value = None
         
         # Mock time to trigger database write check (30+ second gap)
-        mock_time.side_effect = [0, 35]
+        # Need multiple values since time.time() is called by logging system too
+        mock_time.side_effect = [0, 35] + [35] * 10  # Provide extra values for logging calls
         
         original_temp = app.latest_temperature
         app.temperature_history.clear()
@@ -149,7 +151,8 @@ class TestBackgroundThreads:
     @patch('app.get_cpu_temperature')
     @patch('psutil.cpu_percent')
     @patch('psutil.virtual_memory')
-    def test_database_write_interval(self, mock_memory, mock_cpu_percent, 
+    @patch('psutil.disk_usage')
+    def test_database_write_interval(self, mock_disk, mock_memory, mock_cpu_percent, 
                                    mock_get_temp, mock_insert):
         """Test that database writes happen at correct intervals"""
         mock_get_temp.return_value = 55.0
@@ -159,10 +162,15 @@ class TestBackgroundThreads:
         mock_memory_obj.percent = 50.0
         mock_memory.return_value = mock_memory_obj
         
+        mock_disk_obj = Mock()
+        mock_disk_obj.percent = 75.0
+        mock_disk.return_value = mock_disk_obj
+        
         # Mock time to control write intervals
         with patch('time.time') as mock_time:
             # Simulate time progression to trigger database write
-            mock_time.side_effect = [0, 5, 10, 35]  # 30+ second gap triggers write
+            # Need multiple values since time.time() is called by logging system too
+            mock_time.side_effect = [0, 35] + [35] * 10  # Provide extra values for logging calls
             
             # Mock time.sleep to control the infinite loop
             def side_effect_sleep(duration):
@@ -185,7 +193,7 @@ class TestBackgroundThreads:
                 assert call_args['cpu_temp'] == 55.0
                 assert call_args['cpu_usage'] == 30.0
                 assert call_args['memory_usage'] == 50.0
-                # Note: disk_usage should also be verified but requires adding mock_disk patch
+                assert call_args['disk_usage'] == 75.0
     
     @patch('database.insert_system_reading')
     def test_database_write_error_handling(self, mock_insert):
@@ -196,11 +204,16 @@ class TestBackgroundThreads:
         with patch('app.get_cpu_temperature', return_value=55.0), \
              patch('psutil.cpu_percent', return_value=25.0), \
              patch('psutil.virtual_memory') as mock_memory, \
-             patch('time.time', side_effect=[0, 35]):  # Trigger write
+             patch('psutil.disk_usage') as mock_disk, \
+             patch('time.time', side_effect=[0, 35] + [35] * 10):  # Trigger write, extra values for logging
             
             mock_memory_obj = Mock()
             mock_memory_obj.percent = 40.0
             mock_memory.return_value = mock_memory_obj
+            
+            mock_disk_obj = Mock()
+            mock_disk_obj.percent = 60.0
+            mock_disk.return_value = mock_disk_obj
             
             # Mock time.sleep to control the infinite loop
             def side_effect_sleep(duration):
