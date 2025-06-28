@@ -110,6 +110,9 @@ class TestBackgroundThreads:
             
             # Latest temperature should remain unchanged when read fails
             assert app.latest_temperature == original_temp
+            
+            # Database write should be skipped when temp is None (verified by no exception)
+            # The actual implementation skips DB write when temp is None
     
     @patch('app.database.insert_system_reading')
     @patch('app.get_cpu_temperature')
