@@ -209,7 +209,9 @@ class ForecastManager {
         const aqiData = [];
 
         data.forecast.forEach(point => {
-            const date = new Date(point.time);
+            // Ensure timestamp is interpreted as UTC
+            const timeStr = point.time.includes('Z') || point.time.includes('+') ? point.time : point.time + 'Z';
+            const date = new Date(timeStr);
             labels.push(this.utils.formatTimeForChart(date, range));
             pm25Data.push(point.pm2_5);
             aqiData.push(point.aqi);
