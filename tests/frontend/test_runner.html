@@ -44,6 +44,24 @@
     <h1>🧪 Pi Air Monitor Frontend Tests</h1>
     <div id="test-results"></div>
     <div id="test-summary" class="summary"></div>
+    
+    <!-- Mock DOM elements that the JavaScript modules expect -->
+    <div style="display: none;">
+        <canvas id="temperatureChart" width="400" height="200"></canvas>
+        <canvas id="systemMetricsChart" width="400" height="200"></canvas>
+        <canvas id="particlesChart" width="400" height="200"></canvas>
+        <canvas id="aqiChart" width="400" height="200"></canvas>
+        <div id="cpu-percent">0</div>
+        <div id="memory-percent">0</div>
+        <div id="disk-percent">0</div>
+        <div id="cpu-temp">0</div>
+        <div id="uptime">0</div>
+        <div id="latest-pm25">0</div>
+        <div id="latest-aqi">0</div>
+        <div id="latest-aqi-level">Good</div>
+        <div id="particles-time-range">24h</div>
+        <div id="aqi-time-range">24h</div>
+    </div>
 
     <!-- Load Chart.js for testing -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -143,8 +161,12 @@
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
             console.log('Starting frontend tests...');
-            await tester.runAll();
-            console.log('Frontend tests completed');
+            
+            // Wait a bit for all modules to initialize
+            setTimeout(async () => {
+                await tester.runAll();
+                console.log('Frontend tests completed');
+            }, 500);
         });
     </script>
 </body>
