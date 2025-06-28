@@ -166,6 +166,20 @@ class TestBackgroundThreads:
                 else:
                     print(f"SUCCESS: Database write happened {mock_insert.call_count} times!")
                     mock_insert.assert_called_once()  # This should pass if we got here
+                    
+                    # Add back the parameter verification
+                    call_args = mock_insert.call_args[1]
+                    assert call_args['cpu_temp'] == 56.7
+                    assert call_args['cpu_usage'] == 25.5
+                    assert call_args['memory_usage'] == 42.3
+                    assert call_args['disk_usage'] == 85.2
+                    print("SUCCESS: All database parameters verified!")
+                
+                # Add back other assertions that were originally failing
+                assert app.latest_temperature == 56.7, f"Expected latest_temperature=56.7, got {app.latest_temperature}"
+                assert len(app.temperature_history) > 0, "Temperature history should have entries"
+                
+                print("SUCCESS: All assertions passed!")
     
     @patch('app.get_cpu_temperature')
     @patch('database.insert_system_reading')
@@ -229,10 +243,10 @@ class TestBackgroundThreads:
         mock_disk_obj.percent = 75.0
         mock_disk.return_value = mock_disk_obj
         
-        # Mock time to control write intervals
+        # Mock time to control write intervals  
         with patch('time.time') as mock_time:
-            # Mock time: iter1=0 (no write: 0-0<30), iter2=35 (write: 35-0>=30)
-            mock_time.side_effect = [0, 35, 35, 35, 35, 35]  # Simplified - just the essential calls
+            # Apply the same working pattern: first call gets 0, second gets 35
+            mock_time.side_effect = [0, 35, 35, 35]
             
             # Mock datetime separately to avoid time.time() conflicts
             with patch('datetime.datetime') as mock_datetime:
@@ -271,7 +285,7 @@ class TestBackgroundThreads:
              patch('psutil.cpu_percent', return_value=25.0), \
              patch('psutil.virtual_memory') as mock_memory, \
              patch('psutil.disk_usage') as mock_disk, \
-             patch('time.time', side_effect=[0, 35, 35, 35, 35, 35]):  # iter1=0 (no write: 0-0<30), iter2=35 (write: 35-0>=30)
+             patch('time.time', side_effect=[0, 35, 35, 35]):  # Apply the same working pattern
             
             mock_memory_obj = Mock()
             mock_memory_obj.percent = 40.0
