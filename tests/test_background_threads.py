@@ -71,7 +71,7 @@ class TestBackgroundThreads:
         print("Manual timing logic test passed!")
     
     @patch('app.get_cpu_temperature')
-    @patch('database.insert_system_reading')
+    @patch('app.insert_system_reading')
     @patch('psutil.cpu_percent')
     @patch('psutil.virtual_memory')
     @patch('psutil.disk_usage')
@@ -189,7 +189,7 @@ class TestBackgroundThreads:
                 print("SUCCESS: All assertions passed!")
     
     @patch('app.get_cpu_temperature')
-    @patch('database.insert_system_reading')
+    @patch('app.insert_system_reading')
     @patch('time.time')
     def test_sample_temperature_and_system_stats_temp_failure(self, mock_time, mock_insert, mock_get_temp):
         """Test system stats sampling when temperature fails"""
@@ -232,7 +232,7 @@ class TestBackgroundThreads:
             assert temp is None
     
     @patch('app.get_cpu_temperature')
-    @patch('database.insert_system_reading')
+    @patch('app.insert_system_reading')
     @patch('psutil.cpu_percent')
     @patch('psutil.virtual_memory')
     @patch('psutil.disk_usage')
@@ -378,7 +378,7 @@ class TestBackgroundThreads:
         assert mock_get_temp.call_count >= 2, "Should have called get_cpu_temperature at least twice"
     
     @patch('app.get_cpu_temperature')
-    @patch('database.insert_system_reading')
+    @patch('app.insert_system_reading')
     @patch('psutil.cpu_percent')
     @patch('psutil.virtual_memory')
     @patch('psutil.disk_usage')
@@ -468,7 +468,7 @@ class TestBackgroundThreads:
         assert True, "Diagnostic test always passes"
     
     @patch('app.get_cpu_temperature')
-    @patch('database.insert_system_reading')
+    @patch('app.insert_system_reading')
     @patch('psutil.cpu_percent')
     @patch('psutil.virtual_memory')
     @patch('psutil.disk_usage')
