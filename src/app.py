@@ -131,8 +131,12 @@ def sample_temperature_and_system_stats():
                 logger.debug(f"Temperature collection failed at {timestamp}")
             
             # Write to database every 30 seconds (only if we have valid temperature)
-            if current_time - last_db_write >= db_write_interval:
-                if temp is not None:
+            time_diff = current_time - last_db_write
+            should_write_time = time_diff >= db_write_interval
+            temp_valid = temp is not None
+            
+            if should_write_time:
+                if temp_valid:
                     try:
                         insert_system_reading(
                             cpu_temp=temp,
@@ -140,12 +144,12 @@ def sample_temperature_and_system_stats():
                             memory_usage=memory_usage,
                             disk_usage=disk_usage
                         )
-                        logger.debug(f"Inserted system reading: temp={temp}°C, CPU={cpu_usage}%, mem={memory_usage}%")
+                        logger.debug(f"Database write successful: temp={temp}°C, CPU={cpu_usage}%, mem={memory_usage}%")
                         last_db_write = current_time
                     except Exception as e:
-                        logger.error(f"Error writing system reading to database: {e}")
+                        logger.error(f"Database write failed: {e}")
                 else:
-                    logger.warning(f"Skipping database write due to NULL temperature (CPU={cpu_usage}%, mem={memory_usage}%)")
+                    logger.debug(f"Skipping database write: temperature is None")
                     # Still update last_db_write to avoid spam, but try again sooner
                     last_db_write = current_time - (db_write_interval // 2)
                     

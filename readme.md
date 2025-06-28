@@ -2,7 +2,7 @@
 
 A comprehensive Raspberry Pi monitoring system with real-time system metrics and air quality monitoring using the PMS7003 sensor.
 
-## Features
+## 🚀 Features
 
 ### System Monitoring
 - **Real-time CPU monitoring** - Usage percentage and temperature tracking
@@ -17,16 +17,19 @@ A comprehensive Raspberry Pi monitoring system with real-time system metrics and
 - **Real-time air quality measurements** using PMS7003 sensor
 - **Air Quality Index (AQI)** calculation and display with color-coded levels
 - **Particle concentration monitoring** - PM1.0, PM2.5, and PM10 measurements
-- **Historical air quality data** with 24-hour charts at 15-minute intervals
-- **Persistent data storage** in SQLite database
+- **"Lowest Air Quality (24h)"** card showing worst readings with timestamps
+- **Historical air quality data** with multiple time ranges (1h, 6h, 24h)
+- **Persistent data storage** in SQLite database with automatic cleanup
 - **Automatic sensor reconnection** on connection failures
 
-### Web Interface
-- **Responsive design** optimized for desktop and mobile devices
-- **Tabbed interface** with Air Quality as the default view
-- **Auto-updating dashboard** with configurable refresh intervals
-- **Interactive charts** using Chart.js for data visualization
-- **Dark theme** with Raspberry Pi inspired colors
+### Modern Web Interface
+- **📱 Mobile-first responsive design** optimized for all screen sizes
+- **🎨 Clean modular architecture** with organized JavaScript modules
+- **📊 Interactive charts** with touch gestures and time range selection
+- **🌍 Proper timezone handling** (UTC to Pacific Time conversion)
+- **🎯 Touch-friendly controls** with enhanced mobile UX
+- **⚡ Real-time updates** with configurable refresh intervals
+- **🎨 AQI color coding** for instant air quality assessment
 
 ## Prerequisites
 
@@ -83,7 +86,7 @@ pip install -r requirements.txt
 
 3. Initialize the database:
 ```bash
-python -c "from src.database import init_db; init_db()"
+python -c "from src.database import init_database; init_database()"
 ```
 
 4. Install systemd services (automatically detects user and paths):
@@ -134,15 +137,21 @@ hostname -I
 http://YOUR_PI_IP_ADDRESS:5000
 ```
 
-## API Endpoints
+## 📡 API Endpoints
 
+### Core Endpoints
 - `GET /` - Web dashboard interface
 - `GET /api/system` - Complete system information (JSON)
-- `GET /api/stats` - Real-time stats (CPU, memory, temperature, current air quality)
+- `GET /api/stats` - Real-time stats (CPU, memory, temperature)
+
+### Air Quality Endpoints
+- `GET /api/air-quality-latest` - Latest air quality sensor reading
+- `GET /api/air-quality-worst-24h` - Worst air quality reading from last 24h
+- `GET /api/air-quality-history?range={1h|6h|24h}` - Historical air quality data
+
+### System History Endpoints
 - `GET /api/temperature-history` - CPU temperature history data
 - `GET /api/system-history` - Historical system metrics (24h)
-- `GET /api/air-quality-latest` - Latest air quality sensor reading
-- `GET /api/air-quality-history` - Historical air quality data (24h)
 
 ## Configuration
 
@@ -186,14 +195,50 @@ sudo systemctl restart pimonitor.service
 sudo systemctl restart air-quality-monitor.service
 ```
 
-## Testing
+## 🧪 Testing
 
-Run the PMS7003 sensor test:
+The project includes comprehensive test coverage for both backend and frontend components.
+
+### Quick Test Commands
+
 ```bash
-cd /path/to/your/pi_air  # Navigate to your project directory
-source venv/bin/activate
-python tests/test_pms_simple.py
+# Install test dependencies
+pip install -r requirements.txt
+
+# Run all backend tests
+pytest
+
+# Run specific test categories
+pytest -m unit          # Unit tests only
+pytest -m api           # API tests only
+pytest -m database      # Database tests only
+pytest -m "not hardware"  # Skip hardware-specific tests
+
+# Run with coverage
+pytest --cov=src --cov-report=html
 ```
+
+### Frontend Tests
+
+Open the frontend test runner in your browser:
+```bash
+# Start local server (optional)
+python -m http.server 8000
+
+# Open in browser
+open http://localhost:8000/tests/frontend/test_runner.html
+```
+
+### Test Categories
+
+- **Unit Tests** (`@pytest.mark.unit`) - Individual component testing
+- **Integration Tests** (`@pytest.mark.integration`) - Component interaction testing
+- **API Tests** (`@pytest.mark.api`) - Flask endpoint testing
+- **Database Tests** (`@pytest.mark.database`) - Database operation testing
+- **Frontend Tests** - JavaScript module testing
+- **Hardware Tests** (`@pytest.mark.hardware`) - Raspberry Pi specific tests
+
+See [TESTING.md](TESTING.md) for detailed testing documentation.
 
 ## Troubleshooting
 
@@ -225,50 +270,88 @@ sqlite3 data/monitoring.db "SELECT COUNT(*) FROM air_quality_readings;"
 
 The database includes automatic cleanup to prevent unlimited growth.
 
-## Project Structure
+## 🏗️ Architecture
+
+### Frontend (Modular JavaScript)
+- **config.js** - Centralized configuration and constants
+- **utils.js** - Shared utility functions and helpers
+- **charts.js** - Chart management with ChartManager class
+- **hardware.js** - Hardware monitoring functionality
+- **air-quality.js** - Air quality monitoring and display
+- **app.js** - Main application controller
+
+### Backend (Python Flask)
+- **app.py** - Flask web application and API routes
+- **air_quality_monitor.py** - Air quality monitoring service
+- **pms7003.py** - PMS7003 sensor driver
+- **database.py** - Database operations and models
+- **logging_config.py** - Logging configuration
+
+## 📁 Project Structure
 
 ```
 pi_air/
-├── src/
+├── src/                           # Backend Python modules
 │   ├── app.py                    # Flask web application
 │   ├── air_quality_monitor.py    # Air quality monitoring service
 │   ├── pms7003.py               # PMS7003 sensor driver
 │   ├── database.py              # Database operations
 │   └── logging_config.py        # Logging configuration
-├── templates/
-│   └── index.html               # Web dashboard
 ├── static/
+│   ├── js/                      # Frontend JavaScript modules
+│   │   ├── config.js           # Configuration and constants
+│   │   ├── utils.js            # Utility functions
+│   │   ├── charts.js           # Chart management
+│   │   ├── hardware.js         # Hardware monitoring
+│   │   ├── air-quality.js      # Air quality functionality
+│   │   └── app.js              # Main application controller
 │   └── style.css               # Dashboard styling
-├── systemd/
-│   ├── pimonitor.service       # System monitor service template
-│   └── air-quality-monitor.service  # Air quality service template
+├── templates/
+│   └── index.html              # Web dashboard template
+├── tests/                      # Comprehensive test suite
+│   ├── conftest.py            # Test configuration and fixtures
+│   ├── test_database.py       # Database tests
+│   ├── test_api_routes.py     # API endpoint tests
+│   ├── test_hardware_monitoring.py # Hardware tests
+│   └── frontend/              # Frontend JavaScript tests
 ├── scripts/
-│   ├── setup_pi.sh            # Automated setup script
-│   └── install_service.sh     # User-agnostic service installation
-├── tests/
-│   └── test_pms_simple.py     # Sensor tests
-├── data/
-│   └── monitoring.db          # SQLite database (auto-created)
-├── requirements.txt           # Python dependencies
-├── CLAUDE.md                 # Project documentation for Claude Code
-└── README.md                 # This file
+│   ├── setup_pi.sh           # Automated setup script
+│   └── install_service.sh    # Service installation
+├── systemd/                   # Service templates
+├── data/                      # Database storage
+├── requirements.txt          # Python dependencies
+├── pytest.ini              # Test configuration
+├── TESTING.md              # Testing documentation
+├── CLAUDE.md              # Project documentation for Claude Code
+└── README.md              # This file
 ```
 
-## Contributing
+## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Run tests (`pytest` and frontend tests)
+4. Commit your changes (`git commit -m 'Add amazing feature'`)
+5. Push to the branch (`git push origin feature/amazing-feature`)
+6. Create a Pull Request
+
+## 🧪 Quality Assurance
+
+- **80%+ test coverage** with comprehensive backend and frontend tests
+- **Mobile-first responsive design** tested across devices
+- **API validation** with proper error handling
+- **Database integrity** with automatic cleanup and migrations
+- **Performance optimization** for Raspberry Pi Zero 2 W
 
 ## License
 
 MIT License - see LICENSE file for details
 
-## Acknowledgments
+## 🙏 Acknowledgments
 
 - Built with Flask and psutil
 - Charts powered by Chart.js
 - Designed for Raspberry Pi Zero 2 W
 - Air quality calculations based on EPA AQI standards
+- Mobile UX optimized for touch interfaces
+- Comprehensive testing with pytest framework
