@@ -41,11 +41,14 @@ fi
 # Start the Flask app with modular template
 echo
 echo "Starting Flask app with modular template..."
-echo "Access the app at: http://localhost:5000"
+echo "Access the app locally at: http://localhost:5000"
+echo "Access the app remotely at: http://pi-air.local:5000 or http://<pi-ip-address>:5000"
 echo "Press Ctrl+C to stop"
 echo
 
 # Activate virtual environment and run with modular flag
 source venv/bin/activate
 export USE_MODULAR=1
+export FLASK_HOST=0.0.0.0
+export FLASK_PORT=5000
 python src/app.py
