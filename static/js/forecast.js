@@ -190,7 +190,7 @@ class ForecastManager {
         const title = document.getElementById('forecast-chart-title');
         if (title) {
             const hours = this.parseTimeRangeToHours(range);
-            title.textContent = `Hourly PM2.5 Forecast (Next ${range === '72h' ? '3 days' : hours + ' hours'})`;
+            title.textContent = `Hourly PM2.5 Forecast (Next ${hours} hours)`;
         }
 
         // Destroy existing chart
@@ -296,7 +296,7 @@ class ForecastManager {
                             text: 'Time'
                         },
                         ticks: {
-                            maxTicksLimit: range === '72h' ? 12 : (range === '48h' ? 10 : 8),
+                            maxTicksLimit: range === '48h' ? 10 : 8,
                             maxRotation: 45,
                             minRotation: 0
                         }
