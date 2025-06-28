@@ -215,8 +215,7 @@ class TestAirQualityService:
         # Buffer is NOT cleared on error in actual implementation
         assert len(monitor.readings_buffer) == 1  # Still contains the data
     
-    @patch('time.time')
-    def test_monitor_loop_timing(self, mock_time):
+    def test_monitor_loop_timing(self):
         """Test monitor loop timing logic"""
         monitor = air_quality_monitor.AirQualityMonitor()
         monitor.sensor = Mock()
@@ -224,35 +223,33 @@ class TestAirQualityService:
             'pm1_0': 5, 'pm2_5': 12, 'pm10': 18, 'aqi': 50, 'aqi_level': 'Good'
         }
         
-        # Mock time progression - need to track the call index
-        time_values = [
-            0,      # Initial last_write_time (called in __init__)
-            0,      # Initial last_cleanup_time (called in __init__)
-            1,      # First loop iteration
-            35,     # Second iteration (35 seconds later - triggers write)
-            3665    # Third iteration (3665 seconds later - triggers cleanup)
-        ]
-        mock_time.side_effect = time_values
+        # Set initial times manually to avoid Mock objects
+        monitor.last_write_time = 0
+        monitor.last_cleanup_time = 0
         
         with patch.object(monitor, '_write_averaged_data') as mock_write, \
              patch.object(monitor, '_cleanup_old_data') as mock_cleanup, \
+             patch('time.time') as mock_time, \
              patch('time.sleep'):  # Mock sleep to speed up test
+            
+            # Set time values for each iteration
+            time_values = [1, 35, 3665]  # Progressive time values
             
             # Run a few iterations
             monitor.running = True
             
             # Simulate the monitor loop logic with controlled time values
-            for i in range(3):
+            for i, current_time in enumerate(time_values):
                 if not monitor.running:
                     break
+                
+                # Set the mock time for this iteration
+                mock_time.return_value = current_time
                 
                 # Simulate loop logic
                 reading = monitor.sensor.get_data()
                 if reading:
                     monitor.readings_buffer.append(reading)
-                
-                # Get current time by calling the mock (which returns the next side_effect value)
-                current_time = mock_time()
                 
                 # Check write timing (every 30 seconds - SAMPLE_INTERVAL)
                 if current_time - monitor.last_write_time >= 30:
