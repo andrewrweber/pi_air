@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frontend Tests - Pi Air Monitor</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            margin: 10px 0;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .test-passed {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .test-failed {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .test-log {
+            background: #f8f9fa;
+            padding: 10px;
+            margin: 10px 0;
+            border-left: 3px solid #007bff;
+            font-family: monospace;
+        }
+        .summary {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Pi Air Monitor Frontend Tests</h1>
+    <div id="test-results"></div>
+    <div id="test-summary" class="summary"></div>
+
+    <!-- Load Chart.js for testing -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Load application modules -->
+    <script src="../../static/js/config.js"></script>
+    <script src="../../static/js/utils.js"></script>
+    <script src="../../static/js/charts.js"></script>
+    <script src="../../static/js/hardware.js"></script>
+    <script src="../../static/js/air-quality.js"></script>
+    <script src="../../static/js/app.js"></script>
+    
+    <!-- Test framework -->
+    <script>
+        class SimpleTestFramework {
+            constructor() {
+                this.tests = [];
+                this.passed = 0;
+                this.failed = 0;
+            }
+            
+            test(name, testFn) {
+                this.tests.push({ name, testFn });
+            }
+            
+            async runAll() {
+                const resultsDiv = document.getElementById('test-results');
+                
+                for (const test of this.tests) {
+                    const testDiv = document.createElement('div');
+                    testDiv.className = 'test-container';
+                    
+                    try {
+                        await test.testFn();
+                        testDiv.innerHTML = `
+                            <div class="test-passed">✅ ${test.name}</div>
+                        `;
+                        this.passed++;
+                    } catch (error) {
+                        testDiv.innerHTML = `
+                            <div class="test-failed">❌ ${test.name}</div>
+                            <div class="test-log">Error: ${error.message}</div>
+                        `;
+                        this.failed++;
+                    }
+                    
+                    resultsDiv.appendChild(testDiv);
+                }
+                
+                this.showSummary();
+            }
+            
+            showSummary() {
+                const summaryDiv = document.getElementById('test-summary');
+                const total = this.passed + this.failed;
+                const passRate = total > 0 ? ((this.passed / total) * 100).toFixed(1) : 0;
+                
+                summaryDiv.innerHTML = `
+                    <h3>Test Summary</h3>
+                    <p><strong>Total:</strong> ${total} tests</p>
+                    <p><strong>Passed:</strong> ${this.passed}</p>
+                    <p><strong>Failed:</strong> ${this.failed}</p>
+                    <p><strong>Pass Rate:</strong> ${passRate}%</p>
+                `;
+            }
+            
+            assert(condition, message = 'Assertion failed') {
+                if (!condition) {
+                    throw new Error(message);
+                }
+            }
+            
+            assertEqual(actual, expected, message = `Expected ${expected}, got ${actual}`) {
+                if (actual !== expected) {
+                    throw new Error(message);
+                }
+            }
+            
+            assertNotNull(value, message = 'Value should not be null') {
+                if (value === null || value === undefined) {
+                    throw new Error(message);
+                }
+            }
+        }
+        
+        // Initialize test framework
+        const tester = new SimpleTestFramework();
+    </script>
+    
+    <!-- Test definitions -->
+    <script src="test_utils.js"></script>
+    <script src="test_config.js"></script>
+    <script src="test_charts.js"></script>
+    <script src="test_air_quality.js"></script>
+    
+    <!-- Run tests when page loads -->
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('Starting frontend tests...');
+            await tester.runAll();
+            console.log('Frontend tests completed');
+        });
+    </script>
+</body>
+</html>
