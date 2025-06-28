@@ -23,7 +23,6 @@ class ChartManager {
      */
     initializeTemperatureChart() {
         const ctx = document.getElementById('temperatureChart').getContext('2d');
-        const config = window.AppConfig;
         
         this.charts.temperature = new Chart(ctx, {
             type: 'line',
@@ -32,31 +31,33 @@ class ChartManager {
                 datasets: [{
                     label: 'CPU Temperature (°C)',
                     data: [],
-                    borderColor: config.CHART_COLORS.primary,
-                    backgroundColor: `${config.CHART_COLORS.primary}33`,
-                    borderWidth: 2,
-                    fill: true,
-                    tension: 0.4,
-                    pointRadius: window.Utils.isMobile() ? 0 : 3,
-                    pointHoverRadius: window.Utils.isMobile() ? 4 : 6
+                    borderColor: 'rgb(255, 99, 132)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                    tension: 0.1
                 }]
             },
             options: {
-                ...config.CHART_DEFAULTS,
+                responsive: true,
+                maintainAspectRatio: false,
                 scales: {
-                    ...config.CHART_DEFAULTS.scales,
-                    y: {
-                        ...config.CHART_DEFAULTS.scales.y,
-                        beginAtZero: false,
-                        suggestedMin: 30,
-                        suggestedMax: 80,
+                    x: {
                         title: {
                             display: true,
-                            text: 'Temperature (°C)',
-                            font: {
-                                size: window.Utils.isMobile() ? 10 : 12
-                            }
+                            text: 'Time'
                         }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Temperature (°C)'
+                        },
+                        suggestedMin: 30,
+                        suggestedMax: 80
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
                     }
                 }
             }
@@ -68,7 +69,6 @@ class ChartManager {
      */
     initializeSystemMetricsChart() {
         const ctx = document.getElementById('systemMetricsChart').getContext('2d');
-        const config = window.AppConfig;
         
         this.charts.systemMetrics = new Chart(ctx, {
             type: 'line',
@@ -78,96 +78,85 @@ class ChartManager {
                     {
                         label: 'CPU Usage (%)',
                         data: [],
-                        borderColor: config.CHART_COLORS.primary,
-                        backgroundColor: `${config.CHART_COLORS.primary}33`,
-                        borderWidth: 2,
-                        fill: false,
-                        tension: 0.4,
+                        borderColor: 'rgb(255, 99, 132)',
+                        backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                        tension: 0.1,
                         yAxisID: 'y-percentage',
-                        pointRadius: 0
+                        spanGaps: true
                     },
                     {
                         label: 'Memory Usage (%)',
                         data: [],
-                        borderColor: config.CHART_COLORS.secondary,
-                        backgroundColor: `${config.CHART_COLORS.secondary}33`,
-                        borderWidth: 2,
-                        fill: false,
-                        tension: 0.4,
+                        borderColor: 'rgb(54, 162, 235)',
+                        backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                        tension: 0.1,
                         yAxisID: 'y-percentage',
-                        pointRadius: 0
+                        spanGaps: true
                     },
                     {
                         label: 'Disk Usage (%)',
                         data: [],
-                        borderColor: config.CHART_COLORS.tertiary,
-                        backgroundColor: `${config.CHART_COLORS.tertiary}33`,
-                        borderWidth: 2,
-                        fill: false,
-                        tension: 0.4,
+                        borderColor: 'rgb(255, 205, 86)',
+                        backgroundColor: 'rgba(255, 205, 86, 0.1)',
+                        tension: 0.1,
                         yAxisID: 'y-percentage',
-                        pointRadius: 0
+                        spanGaps: true
                     },
                     {
                         label: 'CPU Temperature (°C)',
                         data: [],
-                        borderColor: config.CHART_COLORS.danger,
-                        backgroundColor: `${config.CHART_COLORS.danger}33`,
-                        borderWidth: 2,
-                        fill: false,
-                        tension: 0.4,
+                        borderColor: 'rgb(75, 192, 192)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                        tension: 0.1,
                         yAxisID: 'y-temperature',
-                        pointRadius: 0
+                        spanGaps: true
                     }
                 ]
             },
             options: {
-                ...config.CHART_DEFAULTS,
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
                 scales: {
-                    ...config.CHART_DEFAULTS.scales,
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Time'
+                        }
+                    },
                     'y-percentage': {
                         type: 'linear',
                         display: true,
                         position: 'left',
-                        min: 0,
-                        max: 100,
                         title: {
                             display: true,
-                            text: 'Usage (%)',
-                            font: {
-                                size: window.Utils.isMobile() ? 10 : 12
-                            }
+                            text: 'Usage (%)'
                         },
-                        grid: {
-                            color: 'rgba(0, 0, 0, 0.05)'
-                        },
-                        ticks: {
-                            font: {
-                                size: window.Utils.isMobile() ? 9 : 11
-                            }
-                        }
+                        min: 0,
+                        max: 100
                     },
                     'y-temperature': {
                         type: 'linear',
                         display: true,
                         position: 'right',
-                        min: 20,
-                        max: 90,
                         title: {
                             display: true,
-                            text: 'Temperature (°C)',
-                            font: {
-                                size: window.Utils.isMobile() ? 10 : 12
-                            }
+                            text: 'Temperature (°C)'
                         },
+                        min: 30,
+                        max: 80,
                         grid: {
                             drawOnChartArea: false
-                        },
-                        ticks: {
-                            font: {
-                                size: window.Utils.isMobile() ? 9 : 11
-                            }
                         }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
                     }
                 }
             }
