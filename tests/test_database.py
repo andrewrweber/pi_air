@@ -94,7 +94,7 @@ class TestDatabase:
             for i in range(3):
                 data = sample_air_quality_data.copy()
                 data['pm2_5'] = 10.0 + i  # Varying PM2.5 values
-                database.insert_air_quality_reading(**data)
+                database.insert_reading(**data)
             
             # Get 1-hour averages
             averages = database.get_interval_averages(hours=1, interval_minutes=5)
