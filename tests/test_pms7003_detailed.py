@@ -140,10 +140,19 @@ class TestPMS7003Detailed:
         checksum = sum(frame_data) % (2**16)
         frame_data.extend([(checksum >> 8) & 0xFF, checksum & 0xFF])
         
-        # Mock serial to return frame byte by byte (as _read_frame expects)
+        # Mock serial read pattern: byte-by-byte for start, then bulk read
         mock_conn = Mock()
-        frame_bytes = [bytes([b]) for b in frame_data]
-        mock_conn.read.side_effect = frame_bytes
+        
+        # _read_frame reads:
+        # 1. Byte-by-byte to find start bytes (0x42, then 0x4d)  
+        # 2. Then reads FRAME_LENGTH-2 (30) bytes in one call
+        rest_of_frame = bytes(frame_data[2:])  # Everything after start bytes
+        
+        mock_conn.read.side_effect = [
+            bytes([0x42]),      # First start byte
+            bytes([0x4d]),      # Second start byte  
+            rest_of_frame       # Rest of frame (30 bytes)
+        ]
         mock_conn.reset_input_buffer = Mock()
         
         sensor.serial = mock_conn
@@ -152,6 +161,7 @@ class TestPMS7003Detailed:
         
         assert result is not None
         assert len(result) == len(frame_data)
+        assert result == bytes(frame_data)
     
     def test_read_frame_invalid_start(self):
         """Test reading frame with invalid start bytes"""
