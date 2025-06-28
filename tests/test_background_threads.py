@@ -29,7 +29,8 @@ class TestBackgroundThreads:
         
         # Test thread lock exists
         assert hasattr(app, 'temperature_lock')
-        assert isinstance(app.temperature_lock, threading.Lock)
+        assert hasattr(app.temperature_lock, 'acquire')  # Duck typing check for lock-like object
+        assert hasattr(app.temperature_lock, 'release')
     
     def test_latest_temperature_storage(self):
         """Test latest temperature variable storage"""
@@ -44,7 +45,7 @@ class TestBackgroundThreads:
             app.latest_temperature = original_temp
     
     @patch('app.get_cpu_temperature')
-    @patch('app.database.insert_system_reading')
+    @patch('database.insert_system_reading')
     @patch('psutil.cpu_percent')
     @patch('psutil.virtual_memory')
     @patch('psutil.disk_usage')
@@ -103,7 +104,7 @@ class TestBackgroundThreads:
             assert call_args['disk_usage'] == 85.2
     
     @patch('app.get_cpu_temperature')
-    @patch('app.database.insert_system_reading')
+    @patch('database.insert_system_reading')
     @patch('time.time')
     def test_sample_temperature_and_system_stats_temp_failure(self, mock_time, mock_insert, mock_get_temp):
         """Test system stats sampling when temperature fails"""
@@ -144,7 +145,7 @@ class TestBackgroundThreads:
             timestamp, temp = app.temperature_history[-1]
             assert temp is None
     
-    @patch('app.database.insert_system_reading')
+    @patch('database.insert_system_reading')
     @patch('app.get_cpu_temperature')
     @patch('psutil.cpu_percent')
     @patch('psutil.virtual_memory')
@@ -186,7 +187,7 @@ class TestBackgroundThreads:
                 assert call_args['memory_usage'] == 50.0
                 # Note: disk_usage should also be verified but requires adding mock_disk patch
     
-    @patch('app.database.insert_system_reading')
+    @patch('database.insert_system_reading')
     def test_database_write_error_handling(self, mock_insert):
         """Test error handling when database write fails"""
         # Setup mock to raise exception
