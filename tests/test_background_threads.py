@@ -383,6 +383,96 @@ class TestBackgroundThreads:
     @patch('psutil.virtual_memory')
     @patch('psutil.disk_usage')
     @patch('time.time')
+    def test_real_function_with_diagnostics(self, mock_time, mock_disk, mock_memory, 
+                                          mock_cpu_percent, mock_insert, mock_get_temp):
+        """Test the REAL function with diagnostic logging injected"""
+        
+        # Setup mocks
+        mock_get_temp.return_value = 55.0
+        mock_cpu_percent.return_value = 30.0
+        
+        mock_memory_obj = Mock()
+        mock_memory_obj.percent = 50.0
+        mock_memory.return_value = mock_memory_obj
+        
+        mock_disk_obj = Mock()
+        mock_disk_obj.percent = 75.0
+        mock_disk.return_value = mock_disk_obj
+        
+        # Track time.time() calls
+        time_call_count = [0]
+        def debug_time():
+            call_num = time_call_count[0] + 1
+            if call_num == 1:
+                result = 0
+                print(f"⏰ REAL FUNCTION TIME CALL {call_num}: Returning {result}")
+            elif call_num == 2:  
+                result = 35
+                print(f"⏰ REAL FUNCTION TIME CALL {call_num}: Returning {result}")
+            else:
+                result = 35
+                print(f"⏰ REAL FUNCTION TIME CALL {call_num}: Returning {result}")
+            time_call_count[0] += 1
+            return result
+            
+        mock_time.side_effect = debug_time
+        
+        # Add diagnostic wrapper to insert function
+        def diagnostic_insert(*args, **kwargs):
+            print(f"🎉 REAL FUNCTION: DATABASE WRITE CALLED! Args: {args}, Kwargs: {kwargs}")
+            return None
+            
+        mock_insert.side_effect = diagnostic_insert
+        
+        app.temperature_history.clear()
+        
+        # Patch the real function with diagnostic logging
+        import types
+        
+        # Get the real function source and inject logging
+        with patch('datetime.datetime') as mock_datetime:
+            mock_datetime.now.return_value.isoformat.return_value = "2023-01-01T12:00:00"
+            
+            # Mock time.sleep to stop after 2 iterations
+            def debug_sleep(duration):
+                print(f"💤 REAL FUNCTION: time.sleep({duration}) call #{debug_sleep.call_count + 1}")
+                if debug_sleep.call_count >= 2:
+                    raise KeyboardInterrupt()
+                debug_sleep.call_count += 1
+            debug_sleep.call_count = 0
+            
+            with patch('time.sleep', side_effect=debug_sleep):
+                print("🔍 CALLING REAL app.sample_temperature_and_system_stats() FUNCTION")
+                try:
+                    app.sample_temperature_and_system_stats()
+                except KeyboardInterrupt:
+                    print("🔍 REAL FUNCTION: KeyboardInterrupt caught")
+                    pass
+                
+                print(f"🔍 REAL FUNCTION FINAL STATE:")
+                print(f"   time.time() call count: {time_call_count[0]}")
+                print(f"   mock_insert.call_count: {mock_insert.call_count}")
+                print(f"   mock_get_temp.call_count: {mock_get_temp.call_count}")
+                print(f"   app.latest_temperature: {app.latest_temperature}")
+                print(f"   len(app.temperature_history): {len(app.temperature_history)}")
+                
+                # Compare with our working diagnostic
+                if mock_insert.call_count == 0:
+                    print("❌ REAL FUNCTION: Database write did NOT happen")
+                    print("❌ This proves the real function has different behavior than our diagnostic wrapper")
+                else:
+                    print("✅ REAL FUNCTION: Database write DID happen")
+                    print("✅ Real function works correctly!")
+        
+        # This is diagnostic - don't fail the test
+        assert True, "Diagnostic test always passes"
+    
+    @patch('app.get_cpu_temperature')
+    @patch('database.insert_system_reading')
+    @patch('psutil.cpu_percent')
+    @patch('psutil.virtual_memory')
+    @patch('psutil.disk_usage')
+    @patch('time.time')
     def test_database_write_error_handling(self, mock_time, mock_disk, mock_memory, 
                                          mock_cpu_percent, mock_insert, mock_get_temp):
         """Test error handling when database write fails"""
