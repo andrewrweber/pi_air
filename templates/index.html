@@ -123,6 +123,42 @@
                     </div>
                     <div class="db-stats" id="db-stats"></div>
                 </div>
+                
+                <!-- Air Quality Forecast Section -->
+                <div class="air-quality-section" id="air-quality-forecast-section">
+                    <h2>Air Quality Forecast</h2>
+                    
+                    <!-- Daily Forecast Summary Cards -->
+                    <div class="forecast-summary">
+                        <h3>3-Day Outlook</h3>
+                        <div class="forecast-cards" id="forecast-cards">
+                            <!-- Daily forecast cards will be populated here -->
+                        </div>
+                    </div>
+                    
+                    <!-- Hourly Forecast Chart -->
+                    <div class="forecast-chart-section">
+                        <h3 id="forecast-chart-title">Hourly PM2.5 Forecast (Next 24 hours)</h3>
+                        <div style="position: relative; height:300px; width:100%;">
+                            <canvas id="forecastChart"></canvas>
+                        </div>
+                        <div class="chart-controls">
+                            <button id="forecast-12h-btn" class="chart-btn" onclick="showForecastData('12h')">12 Hours</button>
+                            <button id="forecast-24h-btn" class="chart-btn active" onclick="showForecastData('24h')">24 Hours</button>
+                            <button id="forecast-48h-btn" class="chart-btn" onclick="showForecastData('48h')">48 Hours</button>
+                            <button id="forecast-72h-btn" class="chart-btn" onclick="showForecastData('72h')">3 Days</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Forecast Info -->
+                    <div class="forecast-info" id="forecast-info">
+                        <div class="forecast-meta">
+                            <span id="forecast-location">Pacifica, CA</span> • 
+                            <span id="forecast-provider">Open-Meteo</span> • 
+                            <span id="forecast-updated">Updated: --</span>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
         
@@ -137,6 +173,7 @@
     <script src="{{ url_for('static', filename='js/charts.js') }}"></script>
     <script src="{{ url_for('static', filename='js/hardware.js') }}"></script>
     <script src="{{ url_for('static', filename='js/air-quality.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/forecast.js') }}"></script>
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>

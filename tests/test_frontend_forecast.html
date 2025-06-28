@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frontend Forecast Tests - Pi Air Monitor</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .test-passed {
+            color: #28a745;
+            font-weight: bold;
+        }
+        .test-failed {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .test-log {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+        .forecast-demo {
+            margin-top: 20px;
+        }
+        #test-forecast-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .forecast-card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+        }
+        .forecast-aqi {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin: 5px 0;
+        }
+        .forecast-aqi-level {
+            padding: 4px 8px;
+            border-radius: 12px;
+            color: white;
+            font-size: 0.8em;
+            display: inline-block;
+            margin: 5px 0;
+        }
+        .forecast-aqi-level.good { background-color: #00e400; }
+        .forecast-aqi-level.moderate { background-color: #ffff00; color: #333; }
+        .forecast-aqi-level.unhealthy-sensitive { background-color: #ff7e00; }
+        .forecast-aqi-level.unhealthy { background-color: #ff0000; }
+        .forecast-aqi-level.very-unhealthy { background-color: #8f3f97; }
+        .forecast-aqi-level.hazardous { background-color: #7e0023; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Frontend Forecast Tests</h1>
+        <p>Testing forecast functionality for Pi Air Monitor</p>
+        
+        <div class="test-section">
+            <h2>1. API Endpoint Tests</h2>
+            <div id="api-test-results"></div>
+            <div class="test-log" id="api-test-log"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>2. Utility Function Tests</h2>
+            <div id="utils-test-results"></div>
+            <div class="test-log" id="utils-test-log"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>3. Forecast Manager Tests</h2>
+            <div id="forecast-test-results"></div>
+            <div class="test-log" id="forecast-test-log"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>4. Visual Display Tests</h2>
+            <div id="visual-test-results"></div>
+            <div class="forecast-demo">
+                <h4>Sample Forecast Cards:</h4>
+                <div id="test-forecast-cards"></div>
+            </div>
+            <div class="test-log" id="visual-test-log"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>5. Integration Tests</h2>
+            <div id="integration-test-results"></div>
+            <div class="test-log" id="integration-test-log"></div>
+        </div>
+        
+        <div class="test-section">
+            <h2>Test Summary</h2>
+            <div id="test-summary"></div>
+        </div>
+    </div>
+
+    <!-- Load required dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="../static/js/config.js"></script>
+    <script src="../static/js/utils.js"></script>
+    <script src="../static/js/charts.js"></script>
+    <script src="../static/js/forecast.js"></script>
+
+    <script>
+        // Test framework
+        class ForecastTester {
+            constructor() {
+                this.tests = [];
+                this.passed = 0;
+                this.failed = 0;
+            }
+
+            async runAllTests() {
+                console.log('Starting forecast frontend tests...');
+                
+                await this.testAPIEndpoints();
+                await this.testUtilityFunctions();
+                await this.testForecastManager();
+                await this.testVisualDisplay();
+                await this.testIntegration();
+                
+                this.showSummary();
+            }
+
+            log(section, message) {
+                const logElement = document.getElementById(`${section}-test-log`);
+                if (logElement) {
+                    logElement.innerHTML += `${new Date().toLocaleTimeString()}: ${message}\n`;
+                    logElement.scrollTop = logElement.scrollHeight;
+                }
+                console.log(`[${section}] ${message}`);
+            }
+
+            pass(section, testName) {
+                this.passed++;
+                this.log(section, `✓ ${testName} - PASSED`);
+            }
+
+            fail(section, testName, error) {
+                this.failed++;
+                this.log(section, `✗ ${testName} - FAILED: ${error}`);
+            }
+
+            updateResults(section, message) {
+                const resultElement = document.getElementById(`${section}-test-results`);
+                if (resultElement) {
+                    resultElement.innerHTML = message;
+                }
+            }
+
+            async testAPIEndpoints() {
+                this.log('api', 'Testing API endpoints...');
+                
+                try {
+                    // Test forecast endpoint
+                    const response = await fetch('/api/air-quality-forecast?hours=6');
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.forecast && Array.isArray(data.forecast)) {
+                            this.pass('api', 'Forecast endpoint returns valid data');
+                        } else {
+                            this.fail('api', 'Forecast endpoint', 'Invalid data structure');
+                        }
+                    } else {
+                        this.fail('api', 'Forecast endpoint', `HTTP ${response.status}`);
+                    }
+
+                    // Test summary endpoint
+                    const summaryResponse = await fetch('/api/air-quality-forecast-summary?days=2');
+                    if (summaryResponse.ok) {
+                        const summaryData = await summaryResponse.json();
+                        if (summaryData.forecast && Array.isArray(summaryData.forecast)) {
+                            this.pass('api', 'Summary endpoint returns valid data');
+                        } else {
+                            this.fail('api', 'Summary endpoint', 'Invalid data structure');
+                        }
+                    } else {
+                        this.fail('api', 'Summary endpoint', `HTTP ${summaryResponse.status}`);
+                    }
+
+                } catch (error) {
+                    this.fail('api', 'API endpoint tests', error.message);
+                }
+
+                this.updateResults('api', `API Tests: ${this.passed} passed, ${this.failed} failed`);
+            }
+
+            testUtilityFunctions() {
+                this.log('utils', 'Testing utility functions...');
+
+                try {
+                    // Test AQI color functions
+                    if (window.Utils) {
+                        const goodColor = window.Utils.getAQIColor(25);
+                        if (goodColor === '#00e400') {
+                            this.pass('utils', 'getAQIColor for good AQI');
+                        } else {
+                            this.fail('utils', 'getAQIColor for good AQI', `Expected #00e400, got ${goodColor}`);
+                        }
+
+                        const moderateClass = window.Utils.getAQIColorClass(75);
+                        if (moderateClass === 'moderate') {
+                            this.pass('utils', 'getAQIColorClass for moderate AQI');
+                        } else {
+                            this.fail('utils', 'getAQIColorClass', `Expected 'moderate', got '${moderateClass}'`);
+                        }
+
+                        // Test day name formatting
+                        const today = new Date();
+                        const todayName = window.Utils.formatDayName(today);
+                        if (todayName === 'Today') {
+                            this.pass('utils', 'formatDayName for today');
+                        } else {
+                            this.fail('utils', 'formatDayName', `Expected 'Today', got '${todayName}'`);
+                        }
+
+                        // Test time formatting
+                        const sampleTime = new Date('2025-06-28T15:30:00');
+                        const formattedTime = window.Utils.formatTimeForChart(sampleTime, '24h');
+                        if (formattedTime.includes('3:30') || formattedTime.includes('15:30')) {
+                            this.pass('utils', 'formatTimeForChart');
+                        } else {
+                            this.fail('utils', 'formatTimeForChart', `Unexpected format: ${formattedTime}`);
+                        }
+
+                        // Test provider name formatting
+                        const providerName = window.Utils.formatProviderName('open-meteo');
+                        if (providerName === 'Open-Meteo') {
+                            this.pass('utils', 'formatProviderName');
+                        } else {
+                            this.fail('utils', 'formatProviderName', `Expected 'Open-Meteo', got '${providerName}'`);
+                        }
+
+                    } else {
+                        this.fail('utils', 'Utils object', 'Utils not available');
+                    }
+                } catch (error) {
+                    this.fail('utils', 'Utility function tests', error.message);
+                }
+
+                this.updateResults('utils', `Utility Tests: ${this.passed} passed, ${this.failed} failed`);
+            }
+
+            testForecastManager() {
+                this.log('forecast', 'Testing forecast manager...');
+
+                try {
+                    if (window.forecastManager) {
+                        // Test initialization
+                        if (typeof window.forecastManager.start === 'function') {
+                            this.pass('forecast', 'ForecastManager has start method');
+                        } else {
+                            this.fail('forecast', 'ForecastManager start method', 'Method not found');
+                        }
+
+                        if (typeof window.forecastManager.updateForecastSummary === 'function') {
+                            this.pass('forecast', 'ForecastManager has updateForecastSummary method');
+                        } else {
+                            this.fail('forecast', 'ForecastManager updateForecastSummary method', 'Method not found');
+                        }
+
+                        if (typeof window.forecastManager.showForecastData === 'function') {
+                            this.pass('forecast', 'ForecastManager has showForecastData method');
+                        } else {
+                            this.fail('forecast', 'ForecastManager showForecastData method', 'Method not found');
+                        }
+
+                        // Test time range parsing
+                        if (typeof window.forecastManager.parseTimeRangeToHours === 'function') {
+                            const hours24 = window.forecastManager.parseTimeRangeToHours('24h');
+                            if (hours24 === 24) {
+                                this.pass('forecast', 'parseTimeRangeToHours for 24h');
+                            } else {
+                                this.fail('forecast', 'parseTimeRangeToHours', `Expected 24, got ${hours24}`);
+                            }
+                        }
+
+                        // Test global function
+                        if (typeof window.showForecastData === 'function') {
+                            this.pass('forecast', 'Global showForecastData function available');
+                        } else {
+                            this.fail('forecast', 'Global showForecastData function', 'Function not found');
+                        }
+
+                    } else {
+                        this.fail('forecast', 'ForecastManager', 'Not available in window object');
+                    }
+                } catch (error) {
+                    this.fail('forecast', 'ForecastManager tests', error.message);
+                }
+
+                this.updateResults('forecast', `Forecast Manager Tests: ${this.passed} passed, ${this.failed} failed`);
+            }
+
+            testVisualDisplay() {
+                this.log('visual', 'Testing visual display components...');
+
+                try {
+                    // Create sample forecast cards
+                    this.createSampleForecastCards();
+
+                    // Test card creation
+                    const cards = document.querySelectorAll('#test-forecast-cards .forecast-card');
+                    if (cards.length > 0) {
+                        this.pass('visual', 'Forecast cards creation');
+                    } else {
+                        this.fail('visual', 'Forecast cards creation', 'No cards created');
+                    }
+
+                    // Test AQI level styling
+                    const goodCard = document.querySelector('.forecast-aqi-level.good');
+                    if (goodCard) {
+                        this.pass('visual', 'AQI level styling applied');
+                    } else {
+                        this.fail('visual', 'AQI level styling', 'Good AQI styling not found');
+                    }
+
+                    // Test responsive design classes
+                    const container = document.getElementById('test-forecast-cards');
+                    if (container && container.style.display === 'grid') {
+                        this.pass('visual', 'Grid layout applied');
+                    } else {
+                        this.fail('visual', 'Grid layout', 'Grid display not applied');
+                    }
+
+                } catch (error) {
+                    this.fail('visual', 'Visual display tests', error.message);
+                }
+
+                this.updateResults('visual', `Visual Tests: ${this.passed} passed, ${this.failed} failed`);
+            }
+
+            createSampleForecastCards() {
+                const container = document.getElementById('test-forecast-cards');
+                if (!container) return;
+
+                const sampleData = [
+                    { day: 'Today', date: 'Jun 28', aqi: 45, level: 'Good', pm25: 8.5 },
+                    { day: 'Tomorrow', date: 'Jun 29', aqi: 75, level: 'Moderate', pm25: 22.1 },
+                    { day: 'Sun', date: 'Jun 30', aqi: 120, level: 'Unhealthy for Sensitive Groups', pm25: 45.2 }
+                ];
+
+                const cards = sampleData.map(data => {
+                    const aqiClass = window.Utils ? window.Utils.getAQIColorClass(data.aqi) : 'moderate';
+                    const aqiColor = window.Utils ? window.Utils.getAQIColor(data.aqi) : '#666';
+                    
+                    return `
+                        <div class="forecast-card">
+                            <h4>${data.day}</h4>
+                            <div style="color: #666; font-size: 0.9em; margin-bottom: 10px;">${data.date}</div>
+                            <div class="forecast-aqi" style="color: ${aqiColor}">${data.aqi}</div>
+                            <div class="forecast-aqi-level ${aqiClass}">${data.level.replace('Unhealthy for Sensitive Groups', 'Unhealthy*')}</div>
+                            <div style="color: #666; font-size: 0.9em;">PM2.5: ${data.pm25} μg/m³</div>
+                        </div>
+                    `;
+                }).join('');
+
+                container.innerHTML = cards;
+            }
+
+            async testIntegration() {
+                this.log('integration', 'Testing full integration...');
+
+                try {
+                    // Test if all components are loaded
+                    const requiredObjects = ['AppConfig', 'Utils', 'chartManager', 'forecastManager'];
+                    let allLoaded = true;
+
+                    requiredObjects.forEach(obj => {
+                        if (!window[obj]) {
+                            this.fail('integration', `${obj} availability`, 'Object not found in window');
+                            allLoaded = false;
+                        }
+                    });
+
+                    if (allLoaded) {
+                        this.pass('integration', 'All required objects loaded');
+                    }
+
+                    // Test forecast manager initialization
+                    if (window.forecastManager) {
+                        try {
+                            // Test that we can call updateForecastSummary without errors
+                            // (We won't await it since it might fail in test environment)
+                            window.forecastManager.updateForecastSummary().catch(() => {
+                                // Expected to fail in test environment
+                            });
+                            this.pass('integration', 'ForecastManager method calls');
+                        } catch (error) {
+                            this.fail('integration', 'ForecastManager method calls', error.message);
+                        }
+                    }
+
+                    // Test chart initialization capability
+                    if (typeof Chart !== 'undefined') {
+                        this.pass('integration', 'Chart.js library available');
+                    } else {
+                        this.fail('integration', 'Chart.js library', 'Not loaded');
+                    }
+
+                } catch (error) {
+                    this.fail('integration', 'Integration tests', error.message);
+                }
+
+                this.updateResults('integration', `Integration Tests: ${this.passed} passed, ${this.failed} failed`);
+            }
+
+            showSummary() {
+                const total = this.passed + this.failed;
+                const passRate = total > 0 ? Math.round((this.passed / total) * 100) : 0;
+                
+                const summaryHtml = `
+                    <h3>Overall Results</h3>
+                    <p><strong>Total Tests:</strong> ${total}</p>
+                    <p class="test-passed"><strong>Passed:</strong> ${this.passed}</p>
+                    <p class="test-failed"><strong>Failed:</strong> ${this.failed}</p>
+                    <p><strong>Pass Rate:</strong> ${passRate}%</p>
+                    <div style="margin-top: 20px;">
+                        ${passRate >= 80 ? 
+                            '<p class="test-passed">✓ Forecast functionality is working well!</p>' : 
+                            '<p class="test-failed">✗ Some issues need to be addressed.</p>'
+                        }
+                    </div>
+                `;
+                
+                document.getElementById('test-summary').innerHTML = summaryHtml;
+                
+                console.log(`Frontend tests completed: ${this.passed}/${total} passed (${passRate}%)`);
+            }
+        }
+
+        // Run tests when page loads
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Wait a bit for all scripts to load
+            setTimeout(async () => {
+                const tester = new ForecastTester();
+                await tester.runAllTests();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

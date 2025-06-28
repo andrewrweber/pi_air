@@ -10,7 +10,10 @@ const API_ENDPOINTS = {
     airQualityWorst24h: '/api/air-quality-worst-24h',
     airQualityHistory: '/api/air-quality-history',
     temperatureHistory: '/api/temperature-history',
-    systemHistory: '/api/system-history'
+    systemHistory: '/api/system-history',
+    airQualityForecast: '/api/air-quality-forecast',
+    airQualityForecastSummary: '/api/air-quality-forecast-summary',
+    forecastCacheStats: '/api/forecast-cache-stats'
 };
 
 // Chart colors
@@ -39,7 +42,8 @@ const AQI_LEVELS = {
 const UPDATE_INTERVALS = {
     stats: 2000,        // 2 seconds
     airQuality: 5000,   // 5 seconds
-    charts: 30000       // 30 seconds
+    charts: 30000,      // 30 seconds
+    forecast: 600000    // 10 minutes
 };
 
 // Mobile breakpoint

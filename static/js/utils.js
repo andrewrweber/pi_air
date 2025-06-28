@@ -164,6 +164,104 @@ function debounce(func, wait) {
 }
 
 // Export utilities
+/**
+ * Get AQI color for forecast display
+ * @param {number} aqi - The AQI value
+ * @returns {string} CSS color value
+ */
+function getAQIColor(aqi) {
+    if (aqi === null || aqi === undefined) return '#666';
+    if (aqi <= 50) return '#00e400';
+    if (aqi <= 100) return '#ffff00';
+    if (aqi <= 150) return '#ff7e00';
+    if (aqi <= 200) return '#ff0000';
+    if (aqi <= 300) return '#8f3f97';
+    return '#7e0023';
+}
+
+/**
+ * Get AQI color class for forecast cards
+ * @param {number} aqi - The AQI value
+ * @returns {string} CSS class name
+ */
+function getAQIColorClass(aqi) {
+    if (aqi === null || aqi === undefined) return '';
+    if (aqi <= 50) return 'good';
+    if (aqi <= 100) return 'moderate';
+    if (aqi <= 150) return 'unhealthy-sensitive';
+    if (aqi <= 200) return 'unhealthy';
+    if (aqi <= 300) return 'very-unhealthy';
+    return 'hazardous';
+}
+
+/**
+ * Format AQI level text for display
+ * @param {string} level - The AQI level string
+ * @returns {string} Formatted level text
+ */
+function formatAQILevel(level) {
+    if (!level) return 'Unknown';
+    return level.replace('Unhealthy for Sensitive Groups', 'Unhealthy*');
+}
+
+/**
+ * Format day name for forecast cards
+ * @param {Date} date - The date object
+ * @returns {string} Day name (Today, Tomorrow, or day name)
+ */
+function formatDayName(date) {
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    if (date.toDateString() === today.toDateString()) {
+        return 'Today';
+    } else if (date.toDateString() === tomorrow.toDateString()) {
+        return 'Tomorrow';
+    } else {
+        return date.toLocaleDateString('en-US', { weekday: 'short' });
+    }
+}
+
+/**
+ * Format time for chart labels based on range
+ * @param {Date} date - The date object
+ * @param {string} range - Time range (12h, 24h, 48h, 72h)
+ * @returns {string} Formatted time string
+ */
+function formatTimeForChart(date, range) {
+    if (range === '72h') {
+        // For 3-day view, show day and hour
+        const day = date.toLocaleDateString('en-US', { weekday: 'short' });
+        const hour = date.toLocaleTimeString('en-US', { 
+            hour: 'numeric', 
+            hour12: true 
+        });
+        return `${day} ${hour}`;
+    } else {
+        // For shorter ranges, show time only
+        return date.toLocaleTimeString('en-US', { 
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true 
+        });
+    }
+}
+
+/**
+ * Format provider name for display
+ * @param {string} provider - Provider identifier
+ * @returns {string} Formatted provider name
+ */
+function formatProviderName(provider) {
+    const providerMap = {
+        'open-meteo': 'Open-Meteo',
+        'epa-airnow': 'EPA AirNow',
+        'iqair': 'IQAir'
+    };
+    return providerMap[provider] || provider;
+}
+
 window.Utils = {
     getAQILevelAndClass,
     formatTimestamp,
@@ -172,5 +270,11 @@ window.Utils = {
     updateElementText,
     updateAQIElement,
     isMobile,
-    debounce
+    debounce,
+    getAQIColor,
+    getAQIColorClass,
+    formatAQILevel,
+    formatDayName,
+    formatTimeForChart,
+    formatProviderName
 };
