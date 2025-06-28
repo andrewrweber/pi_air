@@ -124,8 +124,9 @@ class TestBackgroundThreads:
         mock_disk_obj.percent = 85.2
         mock_disk.return_value = mock_disk_obj
         
-        # Simple time mocking: first call gets 0, second gets 35
-        mock_time.side_effect = [0, 35, 35, 35]
+        # Time mocking: provide many values since logging system also calls time.time()
+        # Pattern: first iteration uses 0, second iteration uses 35, then repeat 35 for all subsequent calls
+        mock_time.side_effect = [0] + [35] * 50  # Provide enough values for all time.time() calls
         
         app.temperature_history.clear()
         
