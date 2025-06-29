@@ -195,7 +195,13 @@ class ForecastService:
         for i, time_str in enumerate(times):
             try:
                 # Parse forecast time and skip if it's in the past
-                forecast_dt = datetime.fromisoformat(time_str.replace('Z', '+00:00'))
+                # Open-Meteo returns UTC times without timezone indicator
+                if 'Z' in time_str or '+' in time_str:
+                    forecast_dt = datetime.fromisoformat(time_str.replace('Z', '+00:00'))
+                else:
+                    # Assume UTC if no timezone info
+                    forecast_dt = datetime.fromisoformat(time_str + '+00:00')
+                
                 if forecast_dt <= now:
                     continue
                 
