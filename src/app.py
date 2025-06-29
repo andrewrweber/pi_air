@@ -15,6 +15,8 @@ from database import (get_latest_reading, get_hourly_averages_24h, get_15min_ave
                      insert_system_reading, get_latest_system_reading, get_system_readings_last_24h, 
                      get_system_hourly_averages_24h, init_database, get_interval_averages, 
                      get_temperature_history_optimized, get_readings_last_24h)
+from services.forecast_service import forecast_service
+from config import config
 
 app = Flask(__name__, 
             template_folder='../templates',
@@ -466,6 +468,229 @@ def air_quality_history_api():
         return response
     except Exception as e:
         logger.error(f"Error in air_quality_history_api: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/air-quality-forecast')
+def air_quality_forecast_api():
+    """Get air quality forecast data"""
+    try:
+        # Get forecast hours parameter (default 72 hours = 3 days)
+        hours = request.args.get('hours', '72')
+        try:
+            hours = int(hours)
+            hours = max(1, min(hours, 120))  # Limit between 1 and 120 hours
+        except ValueError:
+            hours = 72
+        
+        logger.info(f"Fetching {hours}-hour air quality forecast")
+        
+        forecast_data = forecast_service.get_forecast(hours=hours)
+        
+        if not forecast_data:
+            logger.warning("No forecast data available")
+            return jsonify({
+                'forecast': [],
+                'hours': hours,
+                'location': {
+                    'name': config.get('location.name'),
+                    'latitude': config.get('location.latitude'),
+                    'longitude': config.get('location.longitude')
+                },
+                'provider': config.get_forecast_provider(),
+                'message': 'No forecast data available'
+            })
+        
+        # Convert forecast data for API response
+        forecast_points = []
+        for point in forecast_data:
+            forecast_points.append({
+                'time': point['forecast_for_time'],
+                'pm1_0': point['pm1_0'],
+                'pm2_5': point['pm2_5'],
+                'pm10': point['pm10'],
+                'carbon_monoxide': point['carbon_monoxide'],
+                'nitrogen_dioxide': point['nitrogen_dioxide'],
+                'sulphur_dioxide': point['sulphur_dioxide'],
+                'ozone': point['ozone'],
+                'aqi': point['aqi'],
+                'aqi_level': point['aqi_level'],
+                'provider': point['provider']
+            })
+        
+        response_data = {
+            'forecast': forecast_points,
+            'hours': hours,
+            'count': len(forecast_points),
+            'location': {
+                'name': config.get('location.name'),
+                'latitude': config.get('location.latitude'),
+                'longitude': config.get('location.longitude')
+            },
+            'provider': config.get_forecast_provider(),
+            'forecast_time': forecast_data[0]['forecast_time'] if forecast_data else None
+        }
+        
+        logger.info(f"Returning {len(forecast_points)} forecast points")
+        return jsonify(response_data)
+        
+    except Exception as e:
+        logger.error(f"Error in air_quality_forecast_api: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/air-quality-forecast-summary')
+def air_quality_forecast_summary_api():
+    """Get summarized air quality forecast (daily averages)"""
+    try:
+        # Get forecast days parameter (default 3 days)
+        days = request.args.get('days', '3')
+        try:
+            days = int(days)
+            days = max(1, min(days, 5))  # Limit between 1 and 5 days
+        except ValueError:
+            days = 3
+        
+        logger.info(f"Fetching {days}-day air quality forecast summary")
+        
+        # Get full hourly forecast
+        forecast_data = forecast_service.get_forecast(hours=days * 24)
+        
+        if not forecast_data:
+            return jsonify({
+                'forecast': [],
+                'days': days,
+                'location': {
+                    'name': config.get('location.name'),
+                    'latitude': config.get('location.latitude'),
+                    'longitude': config.get('location.longitude')
+                },
+                'provider': config.get_forecast_provider(),
+                'message': 'No forecast data available'
+            })
+        
+        # Group by date and calculate daily summaries
+        from datetime import datetime
+        daily_summaries = {}
+        
+        for point in forecast_data:
+            try:
+                # Parse forecast time
+                forecast_time = datetime.fromisoformat(point['forecast_for_time'].replace('Z', '+00:00'))
+                date_key = forecast_time.date().isoformat()
+                
+                if date_key not in daily_summaries:
+                    daily_summaries[date_key] = {
+                        'date': date_key,
+                        'pm2_5_values': [],
+                        'pm10_values': [],
+                        'aqi_values': [],
+                        'hourly_count': 0
+                    }
+                
+                # Collect values for averaging
+                if point['pm2_5'] is not None:
+                    daily_summaries[date_key]['pm2_5_values'].append(point['pm2_5'])
+                if point['pm10'] is not None:
+                    daily_summaries[date_key]['pm10_values'].append(point['pm10'])
+                if point['aqi'] is not None:
+                    daily_summaries[date_key]['aqi_values'].append(point['aqi'])
+                
+                daily_summaries[date_key]['hourly_count'] += 1
+                
+            except (ValueError, KeyError) as e:
+                logger.warning(f"Error processing forecast point: {e}")
+                continue
+        
+        # Calculate daily averages
+        daily_forecast = []
+        for date_key in sorted(daily_summaries.keys()):
+            summary = daily_summaries[date_key]
+            
+            # Calculate averages
+            pm2_5_avg = sum(summary['pm2_5_values']) / len(summary['pm2_5_values']) if summary['pm2_5_values'] else None
+            pm10_avg = sum(summary['pm10_values']) / len(summary['pm10_values']) if summary['pm10_values'] else None
+            aqi_avg = sum(summary['aqi_values']) / len(summary['aqi_values']) if summary['aqi_values'] else None
+            
+            # Calculate max AQI for the day (worst air quality)
+            aqi_max = max(summary['aqi_values']) if summary['aqi_values'] else None
+            
+            # Determine AQI level from average
+            aqi_level = None
+            if aqi_avg is not None:
+                if aqi_avg <= 50:
+                    aqi_level = "Good"
+                elif aqi_avg <= 100:
+                    aqi_level = "Moderate"
+                elif aqi_avg <= 150:
+                    aqi_level = "Unhealthy for Sensitive Groups"
+                elif aqi_avg <= 200:
+                    aqi_level = "Unhealthy"
+                elif aqi_avg <= 300:
+                    aqi_level = "Very Unhealthy"
+                else:
+                    aqi_level = "Hazardous"
+            
+            daily_forecast.append({
+                'date': date_key,
+                'pm2_5_avg': round(pm2_5_avg, 1) if pm2_5_avg is not None else None,
+                'pm10_avg': round(pm10_avg, 1) if pm10_avg is not None else None,
+                'aqi_avg': round(aqi_avg) if aqi_avg is not None else None,
+                'aqi_max': aqi_max,
+                'aqi_level': aqi_level,
+                'hourly_count': summary['hourly_count']
+            })
+        
+        response_data = {
+            'forecast': daily_forecast,
+            'days': days,
+            'count': len(daily_forecast),
+            'location': {
+                'name': config.get('location.name'),
+                'latitude': config.get('location.latitude'),
+                'longitude': config.get('location.longitude')
+            },
+            'provider': config.get_forecast_provider(),
+            'forecast_time': forecast_data[0]['forecast_time'] if forecast_data else None
+        }
+        
+        logger.info(f"Returning {len(daily_forecast)} daily forecast summaries")
+        return jsonify(response_data)
+        
+    except Exception as e:
+        logger.error(f"Error in air_quality_forecast_summary_api: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/forecast-cache-stats')
+def forecast_cache_stats_api():
+    """Get forecast cache statistics"""
+    try:
+        stats = forecast_service.get_cache_stats()
+        
+        response_data = {
+            'cache_stats': stats,
+            'cache_enabled': config.is_forecast_enabled(),
+            'cache_hours': config.get_cache_hours(),
+            'provider': config.get_forecast_provider()
+        }
+        
+        return jsonify(response_data)
+        
+    except Exception as e:
+        logger.error(f"Error in forecast_cache_stats_api: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/forecast-cache-clear', methods=['POST'])
+def forecast_cache_clear_api():
+    """Clear forecast cache"""
+    try:
+        forecast_service.clear_cache()
+        
+        return jsonify({
+            'message': 'Forecast cache cleared successfully',
+            'timestamp': datetime.datetime.utcnow().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in forecast_cache_clear_api: {e}")
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':

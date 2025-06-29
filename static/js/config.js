@@ -10,7 +10,10 @@ const API_ENDPOINTS = {
     airQualityWorst24h: '/api/air-quality-worst-24h',
     airQualityHistory: '/api/air-quality-history',
     temperatureHistory: '/api/temperature-history',
-    systemHistory: '/api/system-history'
+    systemHistory: '/api/system-history',
+    airQualityForecast: '/api/air-quality-forecast',
+    airQualityForecastSummary: '/api/air-quality-forecast-summary',
+    forecastCacheStats: '/api/forecast-cache-stats'
 };
 
 // Chart colors
@@ -28,7 +31,7 @@ const CHART_COLORS = {
 // AQI levels and colors
 const AQI_LEVELS = {
     good: { max: 50, label: 'Good', color: '#00e400', textColor: 'white' },
-    moderate: { max: 100, label: 'Moderate', color: '#ffff00', textColor: 'black' },
+    moderate: { max: 100, label: 'Moderate', color: '#cccc00', textColor: 'black' },
     unhealthySensitive: { max: 150, label: 'Unhealthy for Sensitive Groups', color: '#ff7e00', textColor: 'white' },
     unhealthy: { max: 200, label: 'Unhealthy', color: '#ff0000', textColor: 'white' },
     veryUnhealthy: { max: 300, label: 'Very Unhealthy', color: '#8f3f97', textColor: 'white' },
@@ -39,7 +42,8 @@ const AQI_LEVELS = {
 const UPDATE_INTERVALS = {
     stats: 2000,        // 2 seconds
     airQuality: 5000,   // 5 seconds
-    charts: 30000       // 30 seconds
+    charts: 30000,      // 30 seconds
+    forecast: 600000    // 10 minutes
 };
 
 // Mobile breakpoint
