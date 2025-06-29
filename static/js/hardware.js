@@ -173,13 +173,12 @@ class HardwareMonitor {
         
         // Format labels
         const labels = data.hourly_averages.map(item => {
-            const date = new Date(item.hour_timestamp + 'Z');
+            const date = new Date(item.hour);
             return date.toLocaleString('en-US', {
                 month: 'short',
                 day: 'numeric',
                 hour: 'numeric',
-                timeZone: 'America/Los_Angeles',
-                timeZoneName: 'short'
+                timeZone: 'America/Los_Angeles'
             });
         });
 
