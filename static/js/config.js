@@ -31,7 +31,7 @@ const CHART_COLORS = {
 // AQI levels and colors
 const AQI_LEVELS = {
     good: { max: 50, label: 'Good', color: '#00e400', textColor: 'white' },
-    moderate: { max: 100, label: 'Moderate', color: '#ffff00', textColor: 'black' },
+    moderate: { max: 100, label: 'Moderate', color: '#cccc00', textColor: 'black' },
     unhealthySensitive: { max: 150, label: 'Unhealthy for Sensitive Groups', color: '#ff7e00', textColor: 'white' },
     unhealthy: { max: 200, label: 'Unhealthy', color: '#ff0000', textColor: 'white' },
     veryUnhealthy: { max: 300, label: 'Very Unhealthy', color: '#8f3f97', textColor: 'white' },
