@@ -7,7 +7,7 @@ import requests
 import sqlite3
 import json
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Tuple
 from contextlib import contextmanager
 
@@ -190,7 +190,7 @@ class ForecastService:
         
         forecast_points = []
         forecast_time = datetime.utcnow().isoformat()
-        now = datetime.utcnow()
+        now = datetime.utcnow().replace(tzinfo=timezone.utc)
         
         for i, time_str in enumerate(times):
             try:
