@@ -365,7 +365,7 @@ h1 {
         margin-bottom: 8px;
     }
     
-    /* Enhanced Air Quality cards for mobile - slight adjustments from desktop */
+    /* Enhanced Air Quality cards for mobile - fine-tuned for small screens */
     #aqi-value, #worst-aqi-value {
         font-size: 3.5em !important;
     }
@@ -603,48 +603,61 @@ h1 {
 
 .forecast-card {
     background: white;
-    border-radius: 8px;
-    padding: 15px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    padding: 25px 20px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     text-align: center;
     transition: transform 0.2s;
+    border: 1px solid #e9ecef;
+    min-height: 280px;
 }
 
 .forecast-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
 }
 
 .forecast-card h4 {
-    color: #333;
-    margin-bottom: 8px;
-    font-size: 1.1em;
+    color: #c51a4a;
+    margin-bottom: 12px;
+    font-size: 1.4em;
+    font-weight: 600;
 }
 
 .forecast-date {
     color: #666;
-    font-size: 0.9em;
-    margin-bottom: 10px;
+    font-size: 0.95em;
+    margin-bottom: 15px;
+    font-style: italic;
 }
 
 .forecast-aqi {
-    font-size: 1.8em;
+    font-size: 2.8em;
     font-weight: bold;
-    margin-bottom: 5px;
+    margin-bottom: 10px;
+    line-height: 1;
 }
 
 .forecast-aqi-level {
-    font-size: 0.85em;
-    padding: 4px 8px;
-    border-radius: 12px;
+    font-size: 1.1em;
+    padding: 10px 20px;
+    border-radius: 22px;
     color: white;
-    margin-bottom: 8px;
+    margin-bottom: 15px;
     display: inline-block;
+    font-weight: 600;
+    min-width: 140px;
 }
 
 .forecast-pm25 {
-    color: #666;
-    font-size: 0.9em;
+    background: #f8f9fa;
+    padding: 10px 15px;
+    border-radius: 10px;
+    color: #4a5568;
+    font-size: 1em;
+    font-weight: 500;
+    border: 1px solid #e9ecef;
+    margin-top: 10px;
 }
 
 /* AQI Level Colors for Forecast Cards */
@@ -703,19 +716,33 @@ h1 {
 /* Responsive design for forecast cards */
 @media (max-width: 768px) {
     .forecast-cards {
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-        gap: 10px;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 12px;
     }
     
     .forecast-card {
-        padding: 12px;
+        padding: 20px 15px;
+        min-height: 240px;
     }
     
     .forecast-aqi {
-        font-size: 1.5em;
+        font-size: 2.2em;
     }
     
     .forecast-card h4 {
+        font-size: 1.2em;
+        margin-bottom: 10px;
+    }
+    
+    .forecast-aqi-level {
         font-size: 1em;
+        padding: 8px 16px;
+        border-radius: 20px;
+        min-width: 100px;
+    }
+    
+    .forecast-pm25 {
+        font-size: 0.9em;
+        padding: 8px 12px;
     }
 }
