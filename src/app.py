@@ -399,6 +399,11 @@ def air_quality_latest_api():
         # Get the actual latest reading (not averaged)
         latest_reading = get_latest_reading()
         
+        # Convert timestamp to proper UTC ISO format for frontend
+        if latest_reading and 'timestamp' in latest_reading:
+            db_timestamp = TimestampUtils.parse_to_utc(latest_reading['timestamp'])
+            latest_reading['timestamp'] = db_timestamp.isoformat().replace('+00:00', 'Z')
+        
         response_data = {
             'latest_reading': latest_reading
         }
@@ -424,6 +429,12 @@ def air_quality_worst_24h_api():
         else:
             # Find the reading with the highest AQI (worst air quality)
             worst_reading = max(readings_24h, key=lambda x: x['aqi'] if x['aqi'] is not None else 0)
+            
+            # Convert timestamp to proper UTC ISO format for frontend
+            if worst_reading and 'timestamp' in worst_reading:
+                db_timestamp = TimestampUtils.parse_to_utc(worst_reading['timestamp'])
+                worst_reading['timestamp'] = db_timestamp.isoformat().replace('+00:00', 'Z')
+            
             response_data = {'worst_reading': worst_reading}
         
         response = jsonify(response_data)

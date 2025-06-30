@@ -81,7 +81,17 @@ class AirQualityMonitor {
         
         // Update last updated time
         if (reading.timestamp) {
-            const date = new Date(reading.timestamp);
+            // Ensure timestamp has timezone indicator for proper parsing
+            const utcTimestamp = reading.timestamp.includes('Z') || reading.timestamp.includes('+') ? 
+                reading.timestamp : reading.timestamp + 'Z';
+            const date = new Date(utcTimestamp);
+            
+            if (isNaN(date.getTime())) {
+                console.warn('Invalid timestamp in reading:', reading.timestamp);
+                this.utils.updateElementText('last-update', 'Invalid Date');
+                return;
+            }
+            
             const timeString = date.toLocaleTimeString('en-US', {
                 hour: 'numeric',
                 minute: '2-digit',
