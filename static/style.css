@@ -211,12 +211,14 @@ h1 {
 /* Enhanced air quality cards for desktop - using mobile design principles */
 #air-quality-card, #worst-air-quality-card {
     text-align: center;
-    padding: 25px;
+    padding: 30px 25px;
+    min-height: 400px;
 }
 
 #air-quality-card h2, #worst-air-quality-card h2 {
     font-size: 1.4em;
-    margin-bottom: 20px;
+    margin-bottom: 25px;
+    color: #c51a4a;
 }
 
 #aqi-value, #worst-aqi-value {
@@ -230,10 +232,11 @@ h1 {
     font-size: 1.2em;
     font-weight: 600;
     margin-bottom: 20px;
-    padding: 8px 16px;
-    border-radius: 20px;
+    padding: 12px 24px;
+    border-radius: 25px;
     display: inline-block;
     color: white;
+    min-width: 120px;
 }
 
 .worst-time {
@@ -243,29 +246,31 @@ h1 {
     font-style: italic;
 }
 
-/* Enhanced air quality details */
+/* Enhanced air quality details - mobile-style individual cards */
 .air-quality-details {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 15px;
     margin-top: 20px;
 }
 
 .air-metric {
     background: #f8f9fa;
-    padding: 12px;
-    border-radius: 8px;
+    padding: 15px 20px;
+    border-radius: 12px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     font-weight: 500;
     font-size: 1.1em;
+    border: 1px solid #e9ecef;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .air-metric span {
     font-weight: bold;
     color: #c51a4a;
-    font-size: 1em;
+    font-size: 1.2em;
 }
 
 .air-quality-section > div[style*="height"] {
