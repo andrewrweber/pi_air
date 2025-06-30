@@ -17,6 +17,7 @@ from database import (get_latest_reading, get_hourly_averages_24h, get_15min_ave
                      get_temperature_history_optimized, get_readings_last_24h)
 from services.forecast_service import forecast_service
 from config import config
+from utils.timestamp_utils import TimestampUtils, utc_now, utc_now_iso
 
 app = Flask(__name__, 
             template_folder='../templates',
@@ -120,7 +121,7 @@ def sample_temperature_and_system_stats():
             disk_usage = psutil.disk_usage('/').percent
             
             # Always update real-time history, even if temp is None (for debugging)
-            timestamp = datetime.datetime.now().isoformat()
+            timestamp = utc_now_iso()
             with temperature_lock:
                 temperature_history.append((timestamp, temp))
                 if temp is not None:
@@ -279,7 +280,7 @@ def stats_api():
         stats = {
             'cpu_percent': psutil.cpu_percent(interval=1),  # 1 second interval for Pi Zero 2 W
             'memory_percent': psutil.virtual_memory().percent,
-            'timestamp': datetime.datetime.now().isoformat()
+            'timestamp': utc_now_iso()
         }
         
         # Use stored temperature instead of real-time reading

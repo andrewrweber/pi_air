@@ -86,7 +86,7 @@ class AirQualityMonitor {
                 hour: 'numeric',
                 minute: '2-digit',
                 second: '2-digit',
-                timeZone: 'America/Los_Angeles',
+                timeZone: timezoneManager.getTimezone(),
                 timeZoneName: 'short'
             });
             this.utils.updateElementText('last-update', timeString);
@@ -224,7 +224,7 @@ class AirQualityMonitor {
                 day: 'numeric', 
                 hour: 'numeric',
                 minute: '2-digit',
-                timeZone: 'America/Los_Angeles',
+                timeZone: timezoneManager.getTimezone(),
                 timeZoneName: 'short'
             });
         });
@@ -274,7 +274,7 @@ class AirQualityMonitor {
                 day: 'numeric', 
                 hour: 'numeric',
                 minute: '2-digit',
-                timeZone: 'America/Los_Angeles',
+                timeZone: timezoneManager.getTimezone(),
                 timeZoneName: 'short'
             });
         });

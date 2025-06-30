@@ -15,6 +15,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import config
+from utils.timestamp_utils import TimestampUtils, utc_now, utc_now_iso
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -121,11 +122,11 @@ class ForecastService:
     def _get_cached_forecast(self, hours: int) -> Optional[List[Dict]]:
         """Get cached forecast data if still valid"""
         cache_hours = config.get_cache_hours()
-        cutoff_time = datetime.utcnow() - timedelta(hours=cache_hours)
+        cutoff_time = utc_now() - timedelta(hours=cache_hours)
         cutoff_str = cutoff_time.isoformat()
         
         # Only get future forecast data
-        now = datetime.utcnow()
+        now = utc_now()
         now_str = now.isoformat()
         
         end_time = now + timedelta(hours=hours)
@@ -189,18 +190,13 @@ class ForecastService:
             return []
         
         forecast_points = []
-        forecast_time = datetime.utcnow().isoformat()
-        now = datetime.utcnow().replace(tzinfo=timezone.utc)
+        forecast_time = utc_now_iso()
+        now = utc_now()
         
         for i, time_str in enumerate(times):
             try:
                 # Parse forecast time and skip if it's in the past
-                # Open-Meteo returns UTC times without timezone indicator
-                if 'Z' in time_str or '+' in time_str:
-                    forecast_dt = datetime.fromisoformat(time_str.replace('Z', '+00:00'))
-                else:
-                    # Assume UTC if no timezone info
-                    forecast_dt = datetime.fromisoformat(time_str + '+00:00')
+                forecast_dt = TimestampUtils.parse_to_utc(time_str)
                 
                 if forecast_dt <= now:
                     continue
@@ -264,7 +260,7 @@ class ForecastService:
         forecast_points = []
         
         for day_offset in range(days):
-            forecast_date = datetime.utcnow() + timedelta(days=day_offset)
+            forecast_date = utc_now() + timedelta(days=day_offset)
             date_str = forecast_date.strftime('%Y-%m-%d')
             
             params = {
@@ -294,7 +290,7 @@ class ForecastService:
     def _parse_epa_airnow_response(self, data: List[Dict], forecast_date: datetime) -> List[Dict]:
         """Parse EPA AirNow API response"""
         forecast_points = []
-        forecast_time = datetime.utcnow().isoformat()
+        forecast_time = utc_now_iso()
         
         for item in data:
             try:
@@ -409,7 +405,7 @@ class ForecastService:
         try:
             with self._get_db_connection() as conn:
                 # Clear old cache for this provider
-                cutoff_time = datetime.utcnow() - timedelta(hours=24)
+                cutoff_time = utc_now() - timedelta(hours=24)
                 conn.execute('''
                     DELETE FROM forecast_readings 
                     WHERE provider = ? AND forecast_time < ?
@@ -430,7 +426,7 @@ class ForecastService:
                         point['pm2_5'], point['pm10'], point['carbon_monoxide'],
                         point['nitrogen_dioxide'], point['sulphur_dioxide'], point['ozone'],
                         point['aqi'], point['aqi_level'], point['raw_data'],
-                        datetime.utcnow().isoformat()
+                        utc_now_iso()
                     ))
                 
                 conn.commit()
