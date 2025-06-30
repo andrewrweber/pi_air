@@ -336,14 +336,28 @@ def temperature_history_api():
         if not real_time_history:
             logger.warning("Real-time temperature history is empty, falling back to recent database data")
             recent_data = get_temperature_history_optimized(hours=0.5, max_points=60)  # Last 30 minutes, 60 points
-            real_time_history = [
-                {'timestamp': row['timestamp'], 'temperature': row['cpu_temp']}
-                for row in recent_data
-                if row['cpu_temp'] is not None
-            ]
+            real_time_history = []
+            for row in recent_data:
+                if row['cpu_temp'] is not None:
+                    # Convert database timestamp to proper UTC ISO format
+                    db_timestamp = TimestampUtils.parse_to_utc(row['timestamp'])
+                    converted_timestamp = db_timestamp.isoformat().replace('+00:00', 'Z')
+                    real_time_history.append({
+                        'timestamp': converted_timestamp, 
+                        'temperature': row['cpu_temp']
+                    })
         
         # Get optimized database history for longer term trends (24 hours, max 100 points)
-        db_history = get_temperature_history_optimized(hours=24, max_points=100)
+        db_history_raw = get_temperature_history_optimized(hours=24, max_points=100)
+        
+        # Convert database timestamps to proper UTC ISO format
+        db_history = []
+        for row in db_history_raw:
+            converted_row = dict(row)
+            if 'timestamp' in converted_row:
+                db_timestamp = TimestampUtils.parse_to_utc(converted_row['timestamp'])
+                converted_row['timestamp'] = db_timestamp.isoformat().replace('+00:00', 'Z')
+            db_history.append(converted_row)
         
         response_data = {
             'real_time_history': real_time_history,
@@ -456,13 +470,22 @@ def air_quality_history_api():
         # Get interval averages based on time range
         if time_range == '1h':
             # 1 hour with 2-minute intervals
-            interval_data = get_interval_averages(hours=1, interval_minutes=2)
+            interval_data_raw = get_interval_averages(hours=1, interval_minutes=2)
         elif time_range == '6h':
             # 6 hours with 5-minute intervals
-            interval_data = get_interval_averages(hours=6, interval_minutes=5)
+            interval_data_raw = get_interval_averages(hours=6, interval_minutes=5)
         else:
             # Default: 24 hours with 15-minute intervals
-            interval_data = get_15min_averages_24h()
+            interval_data_raw = get_15min_averages_24h()
+        
+        # Convert database timestamps to proper UTC ISO format
+        interval_data = []
+        for row in interval_data_raw:
+            converted_row = dict(row)
+            if 'interval_time' in converted_row:
+                db_timestamp = TimestampUtils.parse_to_utc(converted_row['interval_time'])
+                converted_row['interval_time'] = db_timestamp.isoformat().replace('+00:00', 'Z')
+            interval_data.append(converted_row)
         
         # Get database stats
         db_stats = get_database_stats()
@@ -698,7 +721,7 @@ def forecast_cache_clear_api():
         
         return jsonify({
             'message': 'Forecast cache cleared successfully',
-            'timestamp': datetime.datetime.utcnow().isoformat()
+            'timestamp': utc_now_iso()
         })
         
     except Exception as e:
