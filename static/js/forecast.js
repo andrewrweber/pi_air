@@ -270,7 +270,7 @@ class ForecastManager {
                                 const point = data.forecast[index];
                                 const date = new Date(point.time);
                                 return date.toLocaleString('en-US', {
-                                    timeZone: 'America/Los_Angeles',
+                                    timeZone: timezoneManager.getTimezone(),
                                     month: 'short',
                                     day: 'numeric',
                                     hour: 'numeric',
@@ -358,7 +358,7 @@ class ForecastManager {
         if (updatedEl && data.forecast_time) {
             const updateTime = new Date(data.forecast_time);
             updatedEl.textContent = `Updated: ${updateTime.toLocaleTimeString('en-US', {
-                timeZone: 'America/Los_Angeles',
+                timeZone: timezoneManager.getTimezone(),
                 hour: 'numeric',
                 minute: '2-digit'
             })}`;

@@ -135,7 +135,7 @@ class HardwareMonitor {
                     hour: 'numeric',
                     minute: '2-digit',
                     second: '2-digit',
-                    timeZone: 'America/Los_Angeles',
+                    timeZone: timezoneManager.getTimezone(),
                     timeZoneName: 'short'
                 });
             });
@@ -149,7 +149,7 @@ class HardwareMonitor {
                     day: 'numeric',
                     hour: 'numeric',
                     minute: '2-digit',
-                    timeZone: 'America/Los_Angeles',
+                    timeZone: timezoneManager.getTimezone(),
                     timeZoneName: 'short'
                 });
             });
@@ -178,7 +178,7 @@ class HardwareMonitor {
                 month: 'short',
                 day: 'numeric',
                 hour: 'numeric',
-                timeZone: 'America/Los_Angeles'
+                timeZone: timezoneManager.getTimezone()
             });
         });
 

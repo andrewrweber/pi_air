@@ -81,12 +81,22 @@ class AirQualityMonitor {
         
         // Update last updated time
         if (reading.timestamp) {
-            const date = new Date(reading.timestamp);
+            // Ensure timestamp has timezone indicator for proper parsing
+            const utcTimestamp = reading.timestamp.includes('Z') || reading.timestamp.includes('+') ? 
+                reading.timestamp : reading.timestamp + 'Z';
+            const date = new Date(utcTimestamp);
+            
+            if (isNaN(date.getTime())) {
+                console.warn('Invalid timestamp in reading:', reading.timestamp);
+                this.utils.updateElementText('last-update', 'Invalid Date');
+                return;
+            }
+            
             const timeString = date.toLocaleTimeString('en-US', {
                 hour: 'numeric',
                 minute: '2-digit',
                 second: '2-digit',
-                timeZone: 'America/Los_Angeles',
+                timeZone: timezoneManager.getTimezone(),
                 timeZoneName: 'short'
             });
             this.utils.updateElementText('last-update', timeString);
@@ -192,7 +202,10 @@ class AirQualityMonitor {
         const cutoffTime = new Date(now.getTime() - (hoursAgo * 60 * 60 * 1000));
         
         return data.filter(item => {
-            const itemTime = new Date(item.interval_time + 'Z');
+            // Ensure timestamp has timezone indicator for proper parsing
+            const utcTimestamp = item.interval_time.includes('Z') || item.interval_time.includes('+') ? 
+                item.interval_time : item.interval_time + 'Z';
+            const itemTime = new Date(utcTimestamp);
             return itemTime >= cutoffTime;
         });
     }
@@ -218,13 +231,16 @@ class AirQualityMonitor {
         }
 
         const labels = filteredData.map(item => {
-            const utcDate = new Date(item.interval_time + 'Z');
+            // Ensure timestamp has timezone indicator for proper parsing
+            const utcTimestamp = item.interval_time.includes('Z') || item.interval_time.includes('+') ? 
+                item.interval_time : item.interval_time + 'Z';
+            const utcDate = new Date(utcTimestamp);
             return utcDate.toLocaleString('en-US', { 
                 month: 'short', 
                 day: 'numeric', 
                 hour: 'numeric',
                 minute: '2-digit',
-                timeZone: 'America/Los_Angeles',
+                timeZone: timezoneManager.getTimezone(),
                 timeZoneName: 'short'
             });
         });
@@ -268,13 +284,16 @@ class AirQualityMonitor {
         }
 
         const labels = filteredData.map(item => {
-            const utcDate = new Date(item.interval_time + 'Z');
+            // Ensure timestamp has timezone indicator for proper parsing
+            const utcTimestamp = item.interval_time.includes('Z') || item.interval_time.includes('+') ? 
+                item.interval_time : item.interval_time + 'Z';
+            const utcDate = new Date(utcTimestamp);
             return utcDate.toLocaleString('en-US', { 
                 month: 'short', 
                 day: 'numeric', 
                 hour: 'numeric',
                 minute: '2-digit',
-                timeZone: 'America/Los_Angeles',
+                timeZone: timezoneManager.getTimezone(),
                 timeZoneName: 'short'
             });
         });

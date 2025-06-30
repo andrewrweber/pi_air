@@ -3,6 +3,110 @@
  */
 
 /**
+ * Timezone Manager for handling user timezone preferences
+ */
+class TimezoneManager {
+    constructor() {
+        this.defaultTimezone = 'America/Los_Angeles'; // PDT/PST default
+        this.userTimezone = this.detectUserTimezone();
+        this.preferredTimezone = this.getPreferredTimezone();
+    }
+
+    /**
+     * Detect user's browser timezone
+     * @returns {string} IANA timezone name
+     */
+    detectUserTimezone() {
+        try {
+            return Intl.DateTimeFormat().resolvedOptions().timeZone;
+        } catch (e) {
+            console.warn('Could not detect user timezone, using default:', e);
+            return this.defaultTimezone;
+        }
+    }
+
+    /**
+     * Get preferred timezone from localStorage or use detected/default
+     * @returns {string} IANA timezone name
+     */
+    getPreferredTimezone() {
+        try {
+            const stored = localStorage.getItem('piair_timezone');
+            if (stored && this.isValidTimezone(stored)) {
+                return stored;
+            }
+        } catch (e) {
+            console.warn('Could not access localStorage for timezone preference:', e);
+        }
+        
+        // Use detected timezone if it's valid, otherwise use default
+        return this.isValidTimezone(this.userTimezone) ? this.userTimezone : this.defaultTimezone;
+    }
+
+    /**
+     * Set user's preferred timezone
+     * @param {string} timezone - IANA timezone name
+     */
+    setPreferredTimezone(timezone) {
+        if (!this.isValidTimezone(timezone)) {
+            console.warn('Invalid timezone:', timezone);
+            return false;
+        }
+        
+        try {
+            localStorage.setItem('piair_timezone', timezone);
+            this.preferredTimezone = timezone;
+            return true;
+        } catch (e) {
+            console.warn('Could not save timezone preference:', e);
+            return false;
+        }
+    }
+
+    /**
+     * Check if timezone is valid
+     * @param {string} timezone - IANA timezone name
+     * @returns {boolean} True if valid
+     */
+    isValidTimezone(timezone) {
+        try {
+            Intl.DateTimeFormat(undefined, { timeZone: timezone });
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    /**
+     * Get current preferred timezone
+     * @returns {string} IANA timezone name
+     */
+    getTimezone() {
+        return this.preferredTimezone;
+    }
+
+    /**
+     * Get timezone info for display
+     * @returns {object} Timezone info
+     */
+    getTimezoneInfo() {
+        const now = new Date();
+        return {
+            timezone: this.preferredTimezone,
+            isUserDetected: this.preferredTimezone === this.userTimezone,
+            isDefault: this.preferredTimezone === this.defaultTimezone,
+            abbreviation: now.toLocaleDateString('en-US', {
+                timeZoneName: 'short',
+                timeZone: this.preferredTimezone
+            }).split(', ')[1] || 'UTC'
+        };
+    }
+}
+
+// Global timezone manager instance
+const timezoneManager = new TimezoneManager();
+
+/**
  * Get AQI level and CSS class based on AQI value
  * @param {number} aqi - The AQI value
  * @returns {object} Object containing level and cssClass
@@ -26,35 +130,48 @@ function getAQILevelAndClass(aqi) {
 }
 
 /**
- * Format timestamp for display in Pacific Time
+ * Format timestamp for display in user's preferred timezone
  * @param {string} timestamp - UTC timestamp from database
+ * @param {boolean} includeSeconds - Whether to include seconds
  * @returns {string} Formatted timestamp string
  */
-function formatTimestamp(timestamp) {
-    // SQLite CURRENT_TIMESTAMP is in UTC format: 'YYYY-MM-DD HH:MM:SS'
-    // Add 'Z' to explicitly indicate UTC timezone for proper parsing
-    const utcTimestamp = timestamp.includes('Z') ? timestamp : timestamp + 'Z';
+function formatTimestamp(timestamp, includeSeconds = false) {
+    // Ensure UTC timezone indicator for proper parsing
+    const utcTimestamp = timestamp.includes('Z') || timestamp.includes('+') ? timestamp : timestamp + 'Z';
     const utcDate = new Date(utcTimestamp);
     
-    // Format directly to Pacific Time using the timezone option
+    if (isNaN(utcDate.getTime())) {
+        console.warn('Invalid timestamp:', timestamp);
+        return 'Invalid Date';
+    }
+    
+    const timezone = timezoneManager.getTimezone();
+    
+    // Format date and time in user's preferred timezone
     const formattedDate = utcDate.toLocaleDateString('en-US', {
         month: 'numeric',
         day: 'numeric',
         year: 'numeric',
-        timeZone: 'America/Los_Angeles'
+        timeZone: timezone
     });
     
-    const formattedTime = utcDate.toLocaleTimeString('en-US', {
+    const timeOptions = {
         hour: '2-digit',
         minute: '2-digit',
-        timeZone: 'America/Los_Angeles'
-    });
+        timeZone: timezone
+    };
     
-    // Get the timezone abbreviation (PDT or PST)
+    if (includeSeconds) {
+        timeOptions.second = '2-digit';
+    }
+    
+    const formattedTime = utcDate.toLocaleTimeString('en-US', timeOptions);
+    
+    // Get the timezone abbreviation
     const timeZoneAbbr = utcDate.toLocaleDateString('en-US', {
         timeZoneName: 'short',
-        timeZone: 'America/Los_Angeles'
-    }).split(', ')[1];
+        timeZone: timezone
+    }).split(', ')[1] || 'UTC';
     
     return `${formattedDate} at ${formattedTime} ${timeZoneAbbr}`;
 }
@@ -66,11 +183,19 @@ function formatTimestamp(timestamp) {
  * @returns {string} Formatted time string
  */
 function formatChartLabel(timestamp, includeSeconds = false) {
-    const date = new Date(timestamp);
+    const utcTimestamp = timestamp.includes('Z') || timestamp.includes('+') ? timestamp : timestamp + 'Z';
+    const date = new Date(utcTimestamp);
+    
+    if (isNaN(date.getTime())) {
+        console.warn('Invalid timestamp for chart label:', timestamp);
+        return 'Invalid';
+    }
+    
+    const timezone = timezoneManager.getTimezone();
     const options = {
         hour: 'numeric',
         minute: '2-digit',
-        timeZone: 'America/Los_Angeles',
+        timeZone: timezone,
         timeZoneName: 'short'
     };
     
@@ -210,24 +335,25 @@ function formatAQILevel(level) {
  * @returns {string} Day name (Today, Tomorrow, or day name)
  */
 function formatDayName(date) {
-    // Convert to Pacific Time for comparison
+    // Convert to user's preferred timezone for comparison
+    const timezone = timezoneManager.getTimezone();
     const today = new Date();
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
     
-    // Compare dates in Pacific Time
-    const dateInPT = date.toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles' });
-    const todayInPT = today.toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles' });
-    const tomorrowInPT = tomorrow.toLocaleDateString('en-US', { timeZone: 'America/Los_Angeles' });
+    // Compare dates in user's preferred timezone
+    const dateInTZ = date.toLocaleDateString('en-US', { timeZone: timezone });
+    const todayInTZ = today.toLocaleDateString('en-US', { timeZone: timezone });
+    const tomorrowInTZ = tomorrow.toLocaleDateString('en-US', { timeZone: timezone });
     
-    if (dateInPT === todayInPT) {
+    if (dateInTZ === todayInTZ) {
         return 'Today';
-    } else if (dateInPT === tomorrowInPT) {
+    } else if (dateInTZ === tomorrowInTZ) {
         return 'Tomorrow';
     } else {
         return date.toLocaleDateString('en-US', { 
             weekday: 'short',
-            timeZone: 'America/Los_Angeles'
+            timeZone: timezone
         });
     }
 }
@@ -239,10 +365,11 @@ function formatDayName(date) {
  * @returns {string} Formatted time string
  */
 function formatTimeForChart(date, range) {
+    const timezone = timezoneManager.getTimezone();
     const hour = date.toLocaleTimeString('en-US', { 
         hour: 'numeric',
         hour12: true,
-        timeZone: 'America/Los_Angeles'
+        timeZone: timezone
     });
     
     if (range === '12h') {
@@ -252,14 +379,14 @@ function formatTimeForChart(date, range) {
         // For longer ranges, show day and hour
         const day = date.toLocaleDateString('en-US', { 
             weekday: 'short',
-            timeZone: 'America/Los_Angeles'
+            timeZone: timezone
         });
         
         // For midnight hours, emphasize the day transition
         const hourNum = date.toLocaleString('en-US', {
             hour: 'numeric',
             hour12: false,
-            timeZone: 'America/Los_Angeles'
+            timeZone: timezone
         });
         
         if (hourNum === '0') {

@@ -10,6 +10,9 @@ from contextlib import contextmanager
 from typing import List, Dict, Optional, Tuple
 import os
 
+# Import centralized timestamp utilities
+from utils.timestamp_utils import TimestampUtils, utc_now, utc_now_iso
+
 logger = logging.getLogger(__name__)
 
 # Use environment variable or default to data directory relative to project root
@@ -106,19 +109,19 @@ def get_latest_reading() -> Optional[Dict]:
 def get_readings_last_24h() -> List[Dict]:
     """Get all readings from the last 24 hours"""
     with get_db_connection() as conn:
-        cutoff_time = datetime.datetime.now() - datetime.timedelta(hours=24)
+        cutoff_time = TimestampUtils.get_utc_cutoff_time(24)
         rows = conn.execute("""
             SELECT * FROM air_quality_readings
             WHERE timestamp > ?
             ORDER BY timestamp ASC
-        """, (cutoff_time,)).fetchall()
+        """, (cutoff_time.isoformat().replace('+00:00', 'Z'),)).fetchall()
         
         return [dict(row) for row in rows]
 
 def get_hourly_averages_24h() -> List[Dict]:
     """Get hourly averages for the last 24 hours"""
     with get_db_connection() as conn:
-        cutoff_time = datetime.datetime.now() - datetime.timedelta(hours=24)
+        cutoff_time = TimestampUtils.get_utc_cutoff_time(24)
         rows = conn.execute("""
             SELECT 
                 strftime('%Y-%m-%d %H:00:00', timestamp) as hour,
@@ -132,14 +135,14 @@ def get_hourly_averages_24h() -> List[Dict]:
             WHERE timestamp > ?
             GROUP BY hour
             ORDER BY hour ASC
-        """, (cutoff_time,)).fetchall()
+        """, (cutoff_time.isoformat().replace('+00:00', 'Z'),)).fetchall()
         
         return [dict(row) for row in rows]
 
 def get_15min_averages_24h() -> List[Dict]:
     """Get 15-minute averages for the last 24 hours"""
     with get_db_connection() as conn:
-        cutoff_time = datetime.datetime.now() - datetime.timedelta(hours=24)
+        cutoff_time = TimestampUtils.get_utc_cutoff_time(24)
         rows = conn.execute("""
             SELECT 
                 strftime('%Y-%m-%d %H:', timestamp) || 
@@ -159,7 +162,7 @@ def get_15min_averages_24h() -> List[Dict]:
             WHERE timestamp > ?
             GROUP BY interval_time
             ORDER BY interval_time ASC
-        """, (cutoff_time,)).fetchall()
+        """, (cutoff_time.isoformat().replace('+00:00', 'Z'),)).fetchall()
         
         return [dict(row) for row in rows]
 
@@ -174,7 +177,7 @@ def get_interval_averages(hours: int = 24, interval_minutes: int = 15) -> List[D
         List of dictionaries with interval averages
     """
     with get_db_connection() as conn:
-        cutoff_time = datetime.datetime.now() - datetime.timedelta(hours=hours)
+        cutoff_time = TimestampUtils.get_utc_cutoff_time(hours)
         
         # Build the interval time formatting based on interval_minutes
         if interval_minutes == 2:
@@ -241,13 +244,13 @@ def get_temperature_history_optimized(hours: int = 24, max_points: int = 100) ->
         List of dictionaries with timestamp and cpu_temp, limited to max_points
     """
     with get_db_connection() as conn:
-        cutoff_time = datetime.datetime.now() - datetime.timedelta(hours=hours)
+        cutoff_time = TimestampUtils.get_utc_cutoff_time(hours)
         
         # First, check how many total records we have in the time range
         total_count = conn.execute("""
             SELECT COUNT(*) FROM system_readings
             WHERE timestamp > ? AND cpu_temp IS NOT NULL
-        """, (cutoff_time,)).fetchone()[0]
+        """, (cutoff_time.isoformat().replace('+00:00', 'Z'),)).fetchone()[0]
         
         logger.debug(f"get_temperature_history_optimized: {total_count} total records for {hours}h range")
         
@@ -258,7 +261,7 @@ def get_temperature_history_optimized(hours: int = 24, max_points: int = 100) ->
                 FROM system_readings
                 WHERE timestamp > ? AND cpu_temp IS NOT NULL
                 ORDER BY timestamp ASC
-            """, (cutoff_time,)).fetchall()
+            """, (cutoff_time.isoformat().replace('+00:00', 'Z'),)).fetchall()
         else:
             # Use LIMIT with OFFSET to sample evenly across the dataset
             step = max(1, total_count // max_points)
@@ -277,19 +280,19 @@ def get_temperature_history_optimized(hours: int = 24, max_points: int = 100) ->
 def cleanup_old_readings():
     """Remove readings older than 24 hours from both tables"""
     with get_db_connection() as conn:
-        cutoff_time = datetime.datetime.now() - datetime.timedelta(hours=24)
+        cutoff_time = TimestampUtils.get_utc_cutoff_time(24)
         
         # Clean up air quality readings
         air_deleted = conn.execute("""
             DELETE FROM air_quality_readings
             WHERE timestamp < ?
-        """, (cutoff_time,)).rowcount
+        """, (cutoff_time.isoformat().replace('+00:00', 'Z'),)).rowcount
         
         # Clean up system readings
         system_deleted = conn.execute("""
             DELETE FROM system_readings
             WHERE timestamp < ?
-        """, (cutoff_time,)).rowcount
+        """, (cutoff_time.isoformat().replace('+00:00', 'Z'),)).rowcount
         
         total_deleted = air_deleted + system_deleted
         if total_deleted > 0:
@@ -356,28 +359,28 @@ def get_latest_system_reading() -> Optional[Dict]:
 def get_system_readings_last_24h() -> List[Dict]:
     """Get all system readings from the last 24 hours"""
     with get_db_connection() as conn:
-        cutoff_time = datetime.datetime.now() - datetime.timedelta(hours=24)
+        cutoff_time = TimestampUtils.get_utc_cutoff_time(24)
         rows = conn.execute("""
             SELECT * FROM system_readings
             WHERE timestamp > ?
             ORDER BY timestamp ASC
-        """, (cutoff_time,)).fetchall()
+        """, (cutoff_time.isoformat().replace('+00:00', 'Z'),)).fetchall()
         
         return [dict(row) for row in rows]
 
 def get_system_hourly_averages_24h() -> List[Dict]:
     """Get hourly averages for system metrics for the last 24 hours"""
     with get_db_connection() as conn:
-        cutoff_time = datetime.datetime.now() - datetime.timedelta(hours=24)
+        cutoff_time = TimestampUtils.get_utc_cutoff_time(24)
         
         # First, check how many total records and how many have valid temperature
         total_count = conn.execute("""
             SELECT COUNT(*) FROM system_readings WHERE timestamp > ?
-        """, (cutoff_time,)).fetchone()[0]
+        """, (cutoff_time.isoformat().replace('+00:00', 'Z'),)).fetchone()[0]
         
         temp_count = conn.execute("""
             SELECT COUNT(*) FROM system_readings WHERE timestamp > ? AND cpu_temp IS NOT NULL
-        """, (cutoff_time,)).fetchone()[0]
+        """, (cutoff_time.isoformat().replace('+00:00', 'Z'),)).fetchone()[0]
         
         logger.debug(f"System readings in last 24h: {total_count} total, {temp_count} with valid temperature")
         
@@ -394,7 +397,7 @@ def get_system_hourly_averages_24h() -> List[Dict]:
             WHERE timestamp > ?
             GROUP BY hour
             ORDER BY hour ASC
-        """, (cutoff_time,)).fetchall()
+        """, (cutoff_time.isoformat().replace('+00:00', 'Z'),)).fetchall()
         
         result = [dict(row) for row in rows]
         
@@ -407,11 +410,11 @@ def get_system_hourly_averages_24h() -> List[Dict]:
 def cleanup_old_system_readings():
     """Remove system readings older than 24 hours"""
     with get_db_connection() as conn:
-        cutoff_time = datetime.datetime.now() - datetime.timedelta(hours=24)
+        cutoff_time = TimestampUtils.get_utc_cutoff_time(24)
         deleted = conn.execute("""
             DELETE FROM system_readings
             WHERE timestamp < ?
-        """, (cutoff_time,)).rowcount
+        """, (cutoff_time.isoformat().replace('+00:00', 'Z'),)).rowcount
         
         if deleted > 0:
             logger.info(f"Cleaned up {deleted} old system readings")
