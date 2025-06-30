@@ -208,29 +208,64 @@ h1 {
     color: white !important;
 }
 
+/* Enhanced air quality cards for desktop - using mobile design principles */
+#air-quality-card, #worst-air-quality-card {
+    text-align: center;
+    padding: 25px;
+}
+
+#air-quality-card h2, #worst-air-quality-card h2 {
+    font-size: 1.4em;
+    margin-bottom: 20px;
+}
+
+#aqi-value, #worst-aqi-value {
+    font-size: 3.2em !important;
+    font-weight: bold;
+    margin-bottom: 10px;
+    line-height: 1;
+}
+
+#aqi-level, #worst-aqi-level {
+    font-size: 1.2em;
+    font-weight: 600;
+    margin-bottom: 20px;
+    padding: 8px 16px;
+    border-radius: 20px;
+    display: inline-block;
+    color: white;
+}
+
+.worst-time {
+    font-size: 0.9em;
+    color: #666;
+    margin-bottom: 15px;
+    font-style: italic;
+}
+
 /* Enhanced air quality details */
 .air-quality-details {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-    gap: 15px;
-    margin-top: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 20px;
 }
 
 .air-metric {
-    background: rgba(255, 255, 255, 0.8);
-    padding: 10px;
+    background: #f8f9fa;
+    padding: 12px;
     border-radius: 8px;
-    text-align: center;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     font-weight: 500;
-    border: 1px solid rgba(197, 26, 74, 0.1);
+    font-size: 1.1em;
 }
 
 .air-metric span {
-    display: block;
-    font-size: 1.3em;
     font-weight: bold;
     color: #c51a4a;
-    margin-top: 5px;
+    font-size: 1em;
 }
 
 .air-quality-section > div[style*="height"] {
@@ -325,61 +360,9 @@ h1 {
         margin-bottom: 8px;
     }
     
-    /* Enhanced Air Quality cards for mobile */
-    #air-quality-card, #worst-air-quality-card {
-        padding: 25px;
-        text-align: center;
-    }
-    
-    #air-quality-card h2, #worst-air-quality-card h2 {
-        font-size: 1.4em;
-        margin-bottom: 20px;
-    }
-    
+    /* Enhanced Air Quality cards for mobile - slight adjustments from desktop */
     #aqi-value, #worst-aqi-value {
         font-size: 3.5em !important;
-        font-weight: bold;
-        margin-bottom: 10px;
-        line-height: 1;
-    }
-    
-    #aqi-level, #worst-aqi-level {
-        font-size: 1.2em;
-        font-weight: 600;
-        margin-bottom: 20px;
-        padding: 8px 16px;
-        border-radius: 20px;
-        display: inline-block;
-    }
-    
-    .worst-time {
-        font-size: 0.9em;
-        color: #666;
-        margin-bottom: 15px;
-        font-style: italic;
-    }
-    
-    .air-quality-details {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        margin-top: 20px;
-    }
-    
-    .air-metric {
-        font-size: 1.1em;
-        padding: 12px;
-        background: #f8f9fa;
-        border-radius: 8px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-weight: 500;
-    }
-    
-    .air-metric span {
-        font-weight: bold;
-        color: #c51a4a;
     }
     
     /* Enhanced chart controls for mobile - horizontal compact layout */
