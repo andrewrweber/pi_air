@@ -109,6 +109,32 @@ class ForecastManager {
     }
 
     /**
+     * Parse a date-only string (YYYY-MM-DD) in the user's timezone
+     * This ensures forecast dates are interpreted as local dates, not UTC midnight
+     * @param {string} dateString - Date string in YYYY-MM-DD format
+     * @returns {Date} Date object representing the date in user's timezone
+     */
+    parseDateInUserTimezone(dateString) {
+        // Parse the date components
+        const [year, month, day] = dateString.split('-').map(Number);
+        
+        // Create date in user's timezone by using the timezone-aware Date constructor
+        // This avoids the UTC midnight issue when parsing date-only strings
+        const timezone = timezoneManager.getTimezone();
+        
+        // Create a date string that includes timezone information
+        const localizedDateString = `${dateString}T12:00:00`;
+        const tempDate = new Date(localizedDateString);
+        
+        // Convert to user's timezone and extract just the date portion
+        const userTimezoneDateString = tempDate.toLocaleDateString('en-CA', { timeZone: timezone });
+        const [userYear, userMonth, userDay] = userTimezoneDateString.split('-').map(Number);
+        
+        // Create a new date at noon in the user's timezone to avoid edge cases
+        return new Date(year, month - 1, day, 12, 0, 0);
+    }
+
+    /**
      * Display forecast summary cards
      */
     displayForecastSummary(data) {
@@ -121,7 +147,8 @@ class ForecastManager {
         }
 
         const cards = data.forecast.map(day => {
-            const date = new Date(day.date);
+            // Parse date string in user's timezone to avoid UTC midnight issues
+            const date = this.parseDateInUserTimezone(day.date);
             const dayName = this.utils.formatDayName(date);
             const aqiColor = this.utils.getAQIColorClass(day.aqi_avg);
             
