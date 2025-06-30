@@ -50,8 +50,12 @@ class TestSystemMonitoring:
     
     def test_cpu_temperature_raspberry_pi(self, mock_temperature_command):
         """Test CPU temperature on Raspberry Pi"""
-        temp = app.get_cpu_temperature()
-        assert temp == 56.7
+        # Mock platform and file system to simulate Raspberry Pi environment
+        with patch('platform.system', return_value='Linux'), \
+             patch('os.path.exists', return_value=True):
+            
+            temp = app.get_cpu_temperature()
+            assert temp == 56.7
         
         # Verify the command was called correctly
         mock_temperature_command.assert_called_with(

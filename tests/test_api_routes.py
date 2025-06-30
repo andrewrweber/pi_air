@@ -108,7 +108,7 @@ class TestAPIRoutes:
             data = json.loads(response.data)
             assert 'worst_reading' in data
             assert data['worst_reading']['aqi'] == 80  # Should be the highest AQI
-            assert data['worst_reading']['timestamp'] == '2023-01-01 15:00:00'
+            assert data['worst_reading']['timestamp'] == '2023-01-01T15:00:00Z'
     
     def test_air_quality_worst_24h_api_no_data(self, client):
         """Test /api/air-quality-worst-24h with no data"""
@@ -266,13 +266,17 @@ class TestAPIRoutes:
         """Test CPU temperature measurement function"""
         from app import get_cpu_temperature
         
-        temp = get_cpu_temperature()
-        assert temp == 56.7
-        
-        # Test when command fails
-        mock_temperature_command.return_value.returncode = 1
-        temp = get_cpu_temperature()
-        assert temp is None
+        # Mock platform and file system to simulate Raspberry Pi environment
+        with patch('platform.system', return_value='Linux'), \
+             patch('os.path.exists', return_value=True):
+            
+            temp = get_cpu_temperature()
+            assert temp == 56.7
+            
+            # Test when command fails
+            mock_temperature_command.return_value.returncode = 1
+            temp = get_cpu_temperature()
+            assert temp is None
     
     def test_api_error_handling(self, client):
         """Test API error handling"""

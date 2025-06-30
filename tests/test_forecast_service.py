@@ -120,9 +120,9 @@ class TestForecastService:
             'longitude': -122.5,
             'hourly': {
                 'time': [
-                    '2025-06-28T00:00',
-                    '2025-06-28T01:00',
-                    '2025-06-28T02:00'
+                    '2025-07-01T00:00',
+                    '2025-07-01T01:00',
+                    '2025-07-01T02:00'
                 ],
                 'pm2_5': [10.1, 12.3, 15.4],
                 'pm10': [13.7, 16.2, 19.8],
@@ -139,7 +139,7 @@ class TestForecastService:
         
         # Check first point
         point = forecast_points[0]
-        assert point['forecast_for_time'] == '2025-06-28T00:00'
+        assert point['forecast_for_time'] == '2025-07-01T00:00'
         assert point['provider'] == 'open-meteo'
         assert point['latitude'] == 37.6
         assert point['longitude'] == -122.5
@@ -162,8 +162,8 @@ class TestForecastService:
         """Test caching of forecast data"""
         forecast_data = [
             {
-                'forecast_time': '2025-06-28T12:00:00',
-                'forecast_for_time': '2025-06-28T15:00:00',
+                'forecast_time': '2025-07-01T12:00:00',
+                'forecast_for_time': '2025-07-01T15:00:00',
                 'provider': 'open-meteo',
                 'latitude': 37.6138,
                 'longitude': -122.4869,
@@ -192,7 +192,7 @@ class TestForecastService:
             assert len(rows) == 1
             
             row = rows[0]
-            assert row['forecast_for_time'] == '2025-06-28T15:00:00'
+            assert row['forecast_for_time'] == '2025-07-01T15:00:00'
             assert row['provider'] == 'open-meteo'
             assert row['pm2_5'] == 10.5
             assert row['aqi'] == 55
@@ -237,7 +237,7 @@ class TestForecastService:
             'latitude': 37.6,
             'longitude': -122.5,
             'hourly': {
-                'time': ['2025-06-28T00:00', '2025-06-28T01:00'],
+                'time': ['2025-07-01T00:00', '2025-07-01T01:00'],
                 'pm2_5': [10.1, 11.2],
                 'pm10': [13.7, 15.1]
             }
@@ -286,7 +286,7 @@ class TestForecastService:
             'latitude': 37.6,
             'longitude': -122.5,
             'hourly': {
-                'time': ['2025-06-28T00:00'],
+                'time': ['2025-07-01T00:00'],
                 'pm2_5': [10.1],
                 'pm10': [13.7]
             }
@@ -308,8 +308,8 @@ class TestForecastService:
         """Test cache clearing functionality"""
         # Add some test data
         service._cache_forecast_data([{
-            'forecast_time': '2025-06-28T12:00:00',
-            'forecast_for_time': '2025-06-28T15:00:00',
+            'forecast_time': '2025-07-01T12:00:00',
+            'forecast_for_time': '2025-07-01T15:00:00',
             'provider': 'open-meteo',
             'latitude': 37.6138,
             'longitude': -122.4869,
