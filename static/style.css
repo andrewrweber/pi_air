@@ -208,29 +208,69 @@ h1 {
     color: white !important;
 }
 
-/* Enhanced air quality details */
+/* Enhanced air quality cards for desktop - using mobile design principles */
+#air-quality-card, #worst-air-quality-card {
+    text-align: center;
+    padding: 30px 25px;
+    min-height: 400px;
+}
+
+#air-quality-card h2, #worst-air-quality-card h2 {
+    font-size: 1.4em;
+    margin-bottom: 25px;
+    color: #c51a4a;
+}
+
+#aqi-value, #worst-aqi-value {
+    font-size: 3.2em !important;
+    font-weight: bold;
+    margin-bottom: 10px;
+    line-height: 1;
+}
+
+#aqi-level, #worst-aqi-level {
+    font-size: 1.2em;
+    font-weight: 600;
+    margin-bottom: 20px;
+    padding: 12px 24px;
+    border-radius: 25px;
+    display: inline-block;
+    color: white;
+    min-width: 120px;
+}
+
+.worst-time {
+    font-size: 0.9em;
+    color: #666;
+    margin-bottom: 15px;
+    font-style: italic;
+}
+
+/* Enhanced air quality details - mobile-style individual cards */
 .air-quality-details {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    display: flex;
+    flex-direction: column;
     gap: 15px;
-    margin-top: 15px;
+    margin-top: 20px;
 }
 
 .air-metric {
-    background: rgba(255, 255, 255, 0.8);
-    padding: 10px;
-    border-radius: 8px;
-    text-align: center;
+    background: #f8f9fa;
+    padding: 15px 20px;
+    border-radius: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     font-weight: 500;
-    border: 1px solid rgba(197, 26, 74, 0.1);
+    font-size: 1.1em;
+    border: 1px solid #e9ecef;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .air-metric span {
-    display: block;
-    font-size: 1.3em;
     font-weight: bold;
     color: #c51a4a;
-    margin-top: 5px;
+    font-size: 1.2em;
 }
 
 .air-quality-section > div[style*="height"] {
@@ -325,61 +365,9 @@ h1 {
         margin-bottom: 8px;
     }
     
-    /* Enhanced Air Quality cards for mobile */
-    #air-quality-card, #worst-air-quality-card {
-        padding: 25px;
-        text-align: center;
-    }
-    
-    #air-quality-card h2, #worst-air-quality-card h2 {
-        font-size: 1.4em;
-        margin-bottom: 20px;
-    }
-    
+    /* Enhanced Air Quality cards for mobile - fine-tuned for small screens */
     #aqi-value, #worst-aqi-value {
         font-size: 3.5em !important;
-        font-weight: bold;
-        margin-bottom: 10px;
-        line-height: 1;
-    }
-    
-    #aqi-level, #worst-aqi-level {
-        font-size: 1.2em;
-        font-weight: 600;
-        margin-bottom: 20px;
-        padding: 8px 16px;
-        border-radius: 20px;
-        display: inline-block;
-    }
-    
-    .worst-time {
-        font-size: 0.9em;
-        color: #666;
-        margin-bottom: 15px;
-        font-style: italic;
-    }
-    
-    .air-quality-details {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        margin-top: 20px;
-    }
-    
-    .air-metric {
-        font-size: 1.1em;
-        padding: 12px;
-        background: #f8f9fa;
-        border-radius: 8px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-weight: 500;
-    }
-    
-    .air-metric span {
-        font-weight: bold;
-        color: #c51a4a;
     }
     
     /* Enhanced chart controls for mobile - horizontal compact layout */
@@ -615,48 +603,61 @@ h1 {
 
 .forecast-card {
     background: white;
-    border-radius: 8px;
-    padding: 15px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    padding: 25px 20px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     text-align: center;
     transition: transform 0.2s;
+    border: 1px solid #e9ecef;
+    min-height: 280px;
 }
 
 .forecast-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
 }
 
 .forecast-card h4 {
-    color: #333;
-    margin-bottom: 8px;
-    font-size: 1.1em;
+    color: #c51a4a;
+    margin-bottom: 12px;
+    font-size: 1.4em;
+    font-weight: 600;
 }
 
 .forecast-date {
     color: #666;
-    font-size: 0.9em;
-    margin-bottom: 10px;
+    font-size: 0.95em;
+    margin-bottom: 15px;
+    font-style: italic;
 }
 
 .forecast-aqi {
-    font-size: 1.8em;
+    font-size: 2.8em;
     font-weight: bold;
-    margin-bottom: 5px;
+    margin-bottom: 10px;
+    line-height: 1;
 }
 
 .forecast-aqi-level {
-    font-size: 0.85em;
-    padding: 4px 8px;
-    border-radius: 12px;
+    font-size: 1.1em;
+    padding: 10px 20px;
+    border-radius: 22px;
     color: white;
-    margin-bottom: 8px;
+    margin-bottom: 15px;
     display: inline-block;
+    font-weight: 600;
+    min-width: 140px;
 }
 
 .forecast-pm25 {
-    color: #666;
-    font-size: 0.9em;
+    background: #f8f9fa;
+    padding: 10px 15px;
+    border-radius: 10px;
+    color: #4a5568;
+    font-size: 1em;
+    font-weight: 500;
+    border: 1px solid #e9ecef;
+    margin-top: 10px;
 }
 
 /* AQI Level Colors for Forecast Cards */
@@ -715,19 +716,33 @@ h1 {
 /* Responsive design for forecast cards */
 @media (max-width: 768px) {
     .forecast-cards {
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-        gap: 10px;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 12px;
     }
     
     .forecast-card {
-        padding: 12px;
+        padding: 20px 15px;
+        min-height: 240px;
     }
     
     .forecast-aqi {
-        font-size: 1.5em;
+        font-size: 2.2em;
     }
     
     .forecast-card h4 {
+        font-size: 1.2em;
+        margin-bottom: 10px;
+    }
+    
+    .forecast-aqi-level {
         font-size: 1em;
+        padding: 8px 16px;
+        border-radius: 20px;
+        min-width: 100px;
+    }
+    
+    .forecast-pm25 {
+        font-size: 0.9em;
+        padding: 8px 12px;
     }
 }
