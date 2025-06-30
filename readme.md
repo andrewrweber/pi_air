@@ -19,6 +19,8 @@ A comprehensive Raspberry Pi monitoring system with real-time system metrics and
 - **Particle concentration monitoring** - PM1.0, PM2.5, and PM10 measurements
 - **"Lowest Air Quality (24h)"** card showing worst readings with timestamps
 - **Historical air quality data** with multiple time ranges (1h, 6h, 24h)
+- **Air quality forecasting** with hourly predictions and daily summaries
+- **Today/Tomorrow forecast cards** with timezone-aware date handling
 - **Persistent data storage** in SQLite database with automatic cleanup
 - **Automatic sensor reconnection** on connection failures
 
@@ -148,6 +150,8 @@ http://YOUR_PI_IP_ADDRESS:5000
 - `GET /api/air-quality-latest` - Latest air quality sensor reading
 - `GET /api/air-quality-worst-24h` - Worst air quality reading from last 24h
 - `GET /api/air-quality-history?range={1h|6h|24h}` - Historical air quality data
+- `GET /api/air-quality-forecast?hours={12|24|48|72}` - Hourly air quality forecast
+- `GET /api/air-quality-forecast-summary?days={1|2|3}` - Daily forecast summaries
 
 ### System History Endpoints
 - `GET /api/temperature-history` - CPU temperature history data
@@ -238,7 +242,7 @@ open http://localhost:8000/tests/frontend/test_runner.html
 - **Frontend Tests** - JavaScript module testing
 - **Hardware Tests** (`@pytest.mark.hardware`) - Raspberry Pi specific tests
 
-See [TESTING.md](TESTING.md) for detailed testing documentation.
+Tests are well-documented with comprehensive coverage of all major functionality.
 
 ## Troubleshooting
 
@@ -274,10 +278,11 @@ The database includes automatic cleanup to prevent unlimited growth.
 
 ### Frontend (Modular JavaScript)
 - **config.js** - Centralized configuration and constants
-- **utils.js** - Shared utility functions and helpers
+- **utils.js** - Shared utility functions with timezone management
 - **charts.js** - Chart management with ChartManager class
 - **hardware.js** - Hardware monitoring functionality
 - **air-quality.js** - Air quality monitoring and display
+- **forecast.js** - Air quality forecasting with timezone-aware date handling
 - **app.js** - Main application controller
 
 ### Backend (Python Flask)
@@ -286,6 +291,7 @@ The database includes automatic cleanup to prevent unlimited growth.
 - **pms7003.py** - PMS7003 sensor driver
 - **database.py** - Database operations and models
 - **logging_config.py** - Logging configuration
+- **services/forecast_service.py** - Air quality forecast integration
 
 ## 📁 Project Structure
 
@@ -296,14 +302,19 @@ pi_air/
 │   ├── air_quality_monitor.py    # Air quality monitoring service
 │   ├── pms7003.py               # PMS7003 sensor driver
 │   ├── database.py              # Database operations
-│   └── logging_config.py        # Logging configuration
+│   ├── logging_config.py        # Logging configuration
+│   ├── services/
+│   │   └── forecast_service.py   # Air quality forecast integration
+│   └── utils/
+│       └── timestamp_utils.py    # Timezone and timestamp utilities
 ├── static/
 │   ├── js/                      # Frontend JavaScript modules
 │   │   ├── config.js           # Configuration and constants
-│   │   ├── utils.js            # Utility functions
+│   │   ├── utils.js            # Utility functions with timezone management
 │   │   ├── charts.js           # Chart management
 │   │   ├── hardware.js         # Hardware monitoring
 │   │   ├── air-quality.js      # Air quality functionality
+│   │   ├── forecast.js         # Air quality forecasting
 │   │   └── app.js              # Main application controller
 │   └── style.css               # Dashboard styling
 ├── templates/
@@ -312,7 +323,9 @@ pi_air/
 │   ├── conftest.py            # Test configuration and fixtures
 │   ├── test_database.py       # Database tests
 │   ├── test_api_routes.py     # API endpoint tests
+│   ├── test_forecast_service.py # Forecast service tests
 │   ├── test_hardware_monitoring.py # Hardware tests
+│   ├── test_frontend_forecast.html # Frontend forecast tests
 │   └── frontend/              # Frontend JavaScript tests
 ├── scripts/
 │   ├── setup_pi.sh           # Automated setup script
@@ -321,7 +334,6 @@ pi_air/
 ├── data/                      # Database storage
 ├── requirements.txt          # Python dependencies
 ├── pytest.ini              # Test configuration
-├── TESTING.md              # Testing documentation
 ├── CLAUDE.md              # Project documentation for Claude Code
 └── README.md              # This file
 ```
