@@ -1,27 +1,4 @@
 {
-  "location": {
-    "name": "Pacifica, CA",
-    "zipcode": "94044",
-    "latitude": 37.6138,
-    "longitude": -122.4869,
-    "timezone": "America/Los_Angeles"
-  },
-  "forecast": {
-    "enabled": true,
-    "provider": "open-meteo",
-    "cache_hours": 1,
-    "forecast_days": 3
-  },
-  "apis": {
-    "open_meteo": {
-      "base_url": "https://air-quality-api.open-meteo.com/v1/air-quality"
-    },
-    "epa_airnow": {
-      "base_url": "https://www.airnowapi.org/aq/forecast/latLong/",
-      "api_key": null,
-      "enabled": false
-    }
-  },
   "alerts": {
     "enabled": true,
     "default_rate_limit_minutes": 15,
@@ -33,9 +10,7 @@
       },
       "email": {
         "enabled": false,
-        "recipients": [
-          "your-email@example.com"
-        ],
+        "recipients": ["your-email@example.com"],
         "smtp": {
           "server": "smtp.gmail.com",
           "port": 587,
@@ -63,13 +38,10 @@
         "enabled": true,
         "severity": "warning",
         "title": "Moderate Air Quality",
-        "message": "Air quality is moderate (AQI: {aqi}). PM2.5: {pm2_5} \u03bcg/m\u00b3",
+        "message": "Air quality is moderate (AQI: {aqi}). PM2.5: {pm2_5} μg/m³",
         "condition": {
           "aqi_above": 100,
-          "aqi_level_in": [
-            "Moderate",
-            "Unhealthy for Sensitive Groups"
-          ]
+          "aqi_level_in": ["Moderate", "Unhealthy for Sensitive Groups"]
         }
       },
       {
@@ -77,14 +49,10 @@
         "enabled": true,
         "severity": "critical",
         "title": "Unhealthy Air Quality",
-        "message": "Air quality is unhealthy (AQI: {aqi}). PM2.5: {pm2_5} \u03bcg/m\u00b3",
+        "message": "Air quality is unhealthy (AQI: {aqi}). PM2.5: {pm2_5} μg/m³",
         "condition": {
           "aqi_above": 150,
-          "aqi_level_in": [
-            "Unhealthy",
-            "Very Unhealthy",
-            "Hazardous"
-          ]
+          "aqi_level_in": ["Unhealthy", "Very Unhealthy", "Hazardous"]
         }
       },
       {
@@ -92,7 +60,7 @@
         "enabled": true,
         "severity": "warning",
         "title": "High CPU Temperature",
-        "message": "CPU temperature is high: {cpu_temp}\u00b0C",
+        "message": "CPU temperature is high: {cpu_temp}°C",
         "condition": {
           "cpu_temp_above": 70
         }

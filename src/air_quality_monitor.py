@@ -15,10 +15,12 @@ from statistics import mean
 from pms7003 import PMS7003
 from database import init_database, insert_reading, cleanup_old_readings
 from logging_config import setup_logging
+from alert_integration import check_air_quality_alerts, check_sensor_failure_alert, periodic_alert_check
 
 # Configuration
 SAMPLE_INTERVAL = 30  # seconds between database writes
 CLEANUP_INTERVAL = 3600  # cleanup old data every hour
+ALERT_CHECK_INTERVAL = 60  # check alerts every minute
 
 class AirQualityMonitor:
     def __init__(self):
@@ -27,6 +29,7 @@ class AirQualityMonitor:
         self.readings_buffer = deque()
         self.last_write_time = time.time()
         self.last_cleanup_time = time.time()
+        self.last_alert_check_time = time.time()
         
         # Set up logging
         self.logger = logging.getLogger(__name__)
@@ -85,6 +88,14 @@ class AirQualityMonitor:
                     
                     self.logger.debug(f"Buffer size: {len(self.readings_buffer)}, " +
                                     f"Latest PM2.5: {data['pm2_5']}")
+                    
+                    # Check for air quality alerts with latest data
+                    try:
+                        alerts = check_air_quality_alerts(data)
+                        if alerts:
+                            self.logger.info(f"Triggered {len(alerts)} air quality alerts")
+                    except Exception as e:
+                        self.logger.error(f"Error checking air quality alerts: {e}")
                 
                 # Check if it's time to write to database
                 if time.time() - self.last_write_time >= SAMPLE_INTERVAL:
@@ -94,11 +105,22 @@ class AirQualityMonitor:
                 if time.time() - self.last_cleanup_time >= CLEANUP_INTERVAL:
                     self._cleanup_old_data()
                 
+                # Check if it's time for periodic alert checks
+                if time.time() - self.last_alert_check_time >= ALERT_CHECK_INTERVAL:
+                    self._check_periodic_alerts()
+                
                 # Short sleep to prevent CPU spinning
                 time.sleep(0.5)
                 
             except Exception as e:
                 self.logger.error(f"Error in monitor loop: {e}", exc_info=True)
+                # Check for sensor failure alert
+                try:
+                    alert = check_sensor_failure_alert(str(e), "PMS7003")
+                    if alert:
+                        self.logger.info("Sent sensor failure alert")
+                except Exception as alert_error:
+                    self.logger.error(f"Error sending sensor failure alert: {alert_error}")
                 time.sleep(5)  # Wait longer on error
         
         # Cleanup on exit
@@ -147,6 +169,14 @@ class AirQualityMonitor:
             self.last_cleanup_time = time.time()
         except Exception as e:
             self.logger.error(f"Error cleaning up database: {e}", exc_info=True)
+    
+    def _check_periodic_alerts(self):
+        """Perform periodic alert checks"""
+        try:
+            periodic_alert_check()
+            self.last_alert_check_time = time.time()
+        except Exception as e:
+            self.logger.error(f"Error in periodic alert check: {e}", exc_info=True)
     
     def _get_aqi_level(self, aqi):
         """Get AQI level description"""

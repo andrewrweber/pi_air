@@ -1,0 +1,181 @@
+{
+  "alerts": {
+    "enabled": true,
+    "default_rate_limit_minutes": 15,
+    "max_history_size": 200,
+    "notifications": {
+      "log": {
+        "enabled": true,
+        "level": "info"
+      },
+      "email": {
+        "enabled": true,
+        "recipients": [
+          "primary@example.com",
+          "backup@example.com"
+        ],
+        "smtp": {
+          "server": "smtp.gmail.com",
+          "port": 587,
+          "use_tls": true,
+          "username": "your-monitor@gmail.com",
+          "password": "your-app-password"
+        }
+      },
+      "webhook": {
+        "enabled": true,
+        "url": "https://your-webhook-url.com/alerts",
+        "timeout": 15,
+        "headers": {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer your-webhook-token"
+        },
+        "custom_fields": {
+          "source": "pi-air-monitor",
+          "location": "Home Office"
+        }
+      }
+    },
+    "rules": [
+      {
+        "type": "air_quality",
+        "enabled": true,
+        "severity": "info",
+        "title": "Good to Moderate Air Quality",
+        "message": "Air quality changed to {aqi_level} (AQI: {aqi}, PM2.5: {pm2_5} μg/m³)",
+        "condition": {
+          "aqi_above": 50,
+          "aqi_level_in": ["Moderate"]
+        }
+      },
+      {
+        "type": "air_quality",
+        "enabled": true,
+        "severity": "warning",
+        "title": "Unhealthy for Sensitive Groups",
+        "message": "Air quality is {aqi_level} (AQI: {aqi}, PM2.5: {pm2_5} μg/m³). Sensitive individuals should limit prolonged outdoor exertion.",
+        "condition": {
+          "aqi_above": 100,
+          "aqi_level_in": ["Unhealthy for Sensitive Groups"]
+        }
+      },
+      {
+        "type": "air_quality",
+        "enabled": true,
+        "severity": "critical",
+        "title": "Unhealthy Air Quality",
+        "message": "Air quality is {aqi_level} (AQI: {aqi}, PM2.5: {pm2_5} μg/m³). Everyone should reduce prolonged outdoor exertion.",
+        "condition": {
+          "aqi_above": 150,
+          "aqi_level_in": ["Unhealthy"]
+        }
+      },
+      {
+        "type": "air_quality",
+        "enabled": true,
+        "severity": "emergency",
+        "title": "Very Unhealthy to Hazardous Air Quality",
+        "message": "EMERGENCY: Air quality is {aqi_level} (AQI: {aqi}, PM2.5: {pm2_5} μg/m³). Avoid all outdoor activities. Close windows and use air purifiers.",
+        "condition": {
+          "aqi_above": 200,
+          "aqi_level_in": ["Very Unhealthy", "Hazardous"]
+        }
+      },
+      {
+        "type": "air_quality",
+        "enabled": true,
+        "severity": "critical",
+        "title": "High PM2.5 Concentration",
+        "message": "High PM2.5 detected: {pm2_5} μg/m³ (AQI: {aqi}). Check for local pollution sources.",
+        "condition": {
+          "pm25_above": 65
+        }
+      },
+      {
+        "type": "system_health",
+        "enabled": true,
+        "severity": "warning",
+        "title": "Elevated CPU Temperature",
+        "message": "CPU temperature is elevated: {cpu_temp}°C. Monitor for overheating.",
+        "condition": {
+          "cpu_temp_above": 65
+        }
+      },
+      {
+        "type": "system_health",
+        "enabled": true,
+        "severity": "critical",
+        "title": "High CPU Temperature",
+        "message": "CPU temperature is high: {cpu_temp}°C. Check cooling and ventilation.",
+        "condition": {
+          "cpu_temp_above": 75
+        }
+      },
+      {
+        "type": "system_health",
+        "enabled": true,
+        "severity": "emergency",
+        "title": "Critical CPU Temperature",
+        "message": "CRITICAL: CPU temperature is {cpu_temp}°C. System may throttle or shut down. Immediate action required.",
+        "condition": {
+          "cpu_temp_above": 80
+        }
+      },
+      {
+        "type": "system_health",
+        "enabled": true,
+        "severity": "warning",
+        "title": "High CPU Usage",
+        "message": "High CPU usage detected: {cpu_usage}%. System may be under heavy load.",
+        "condition": {
+          "cpu_usage_above": 80
+        }
+      },
+      {
+        "type": "system_health",
+        "enabled": true,
+        "severity": "warning",
+        "title": "High Memory Usage",
+        "message": "High memory usage detected: {memory_usage}%. System may need more RAM or memory cleanup.",
+        "condition": {
+          "memory_usage_above": 85
+        }
+      },
+      {
+        "type": "system_health",
+        "enabled": true,
+        "severity": "critical",
+        "title": "High Disk Usage",
+        "message": "Disk usage is high: {disk_usage}%. Consider cleaning up old files or expanding storage.",
+        "condition": {
+          "disk_usage_above": 90
+        }
+      },
+      {
+        "type": "sensor_failure",
+        "enabled": true,
+        "severity": "critical",
+        "title": "Air Quality Sensor Failure",
+        "message": "The PMS7003 air quality sensor has failed or is not responding. Check connections and power supply."
+      },
+      {
+        "type": "data_staleness",
+        "enabled": true,
+        "severity": "warning",
+        "title": "Stale Air Quality Data",
+        "message": "Air quality data is stale (last update: {age_minutes} minutes ago). Check sensor connectivity and service status."
+      }
+    ],
+    "rate_limits": {
+      "air_quality_info": 120,
+      "air_quality_warning": 60,
+      "air_quality_critical": 30,
+      "air_quality_emergency": 15,
+      "system_health_warning": 45,
+      "system_health_critical": 20,
+      "system_health_emergency": 10,
+      "sensor_failure_critical": 5,
+      "data_staleness_warning": 45
+    }
+  }
+}

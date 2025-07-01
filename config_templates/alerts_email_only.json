@@ -1,0 +1,75 @@
+{
+  "alerts": {
+    "enabled": true,
+    "default_rate_limit_minutes": 30,
+    "max_history_size": 50,
+    "notifications": {
+      "log": {
+        "enabled": true,
+        "level": "info"
+      },
+      "email": {
+        "enabled": true,
+        "recipients": [
+          "alert-recipient@example.com",
+          "backup-recipient@example.com"
+        ],
+        "smtp": {
+          "server": "smtp.gmail.com",
+          "port": 587,
+          "use_tls": true,
+          "username": "pi-air-monitor@gmail.com",
+          "password": "your-gmail-app-password"
+        }
+      },
+      "webhook": {
+        "enabled": false
+      }
+    },
+    "rules": [
+      {
+        "type": "air_quality",
+        "enabled": true,
+        "severity": "warning",
+        "title": "Poor Air Quality Alert",
+        "message": "Air quality has degraded to {aqi_level} level. AQI: {aqi}, PM2.5: {pm2_5} μg/m³. Consider limiting outdoor activities.",
+        "condition": {
+          "aqi_above": 100
+        }
+      },
+      {
+        "type": "air_quality",
+        "enabled": true,
+        "severity": "critical",
+        "title": "Hazardous Air Quality Alert",
+        "message": "CRITICAL: Air quality is {aqi_level}. AQI: {aqi}, PM2.5: {pm2_5} μg/m³. Avoid outdoor activities and close windows.",
+        "condition": {
+          "aqi_above": 200
+        }
+      },
+      {
+        "type": "system_health",
+        "enabled": true,
+        "severity": "critical",
+        "title": "System Overheating",
+        "message": "Pi Air Monitor system is overheating. CPU temperature: {cpu_temp}°C. Check ventilation and cooling.",
+        "condition": {
+          "cpu_temp_above": 75
+        }
+      },
+      {
+        "type": "sensor_failure",
+        "enabled": true,
+        "severity": "critical",
+        "title": "Air Quality Sensor Failure",
+        "message": "The air quality sensor has stopped responding or encountered an error. Manual intervention may be required."
+      }
+    ],
+    "rate_limits": {
+      "air_quality_warning": 60,
+      "air_quality_critical": 30,
+      "system_health_critical": 30,
+      "sensor_failure_critical": 10
+    }
+  }
+}

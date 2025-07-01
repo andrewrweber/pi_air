@@ -5,7 +5,7 @@ Handles location settings and API configuration
 
 import json
 import os
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 
 class Config:
     """Configuration manager for Pi Air Monitor"""
@@ -43,6 +43,101 @@ class Config:
                     "base_url": "https://www.airnowapi.org/aq/forecast/latLong/",
                     "api_key": None,
                     "enabled": False
+                }
+            },
+            "alerts": {
+                "enabled": False,
+                "default_rate_limit_minutes": 15,
+                "max_history_size": 100,
+                "notifications": {
+                    "log": {
+                        "enabled": True,
+                        "level": "info"
+                    },
+                    "email": {
+                        "enabled": False,
+                        "recipients": [],
+                        "smtp": {
+                            "server": "smtp.gmail.com",
+                            "port": 587,
+                            "use_tls": True,
+                            "username": "",
+                            "password": ""
+                        }
+                    },
+                    "webhook": {
+                        "enabled": False,
+                        "url": "",
+                        "timeout": 10,
+                        "headers": {},
+                        "custom_fields": {}
+                    }
+                },
+                "rules": [
+                    {
+                        "type": "air_quality",
+                        "enabled": True,
+                        "severity": "warning",
+                        "title": "Moderate Air Quality",
+                        "message": "Air quality is moderate (AQI: {aqi}). PM2.5: {pm2_5} μg/m³",
+                        "condition": {
+                            "aqi_above": 100,
+                            "aqi_level_in": ["Moderate", "Unhealthy for Sensitive Groups"]
+                        }
+                    },
+                    {
+                        "type": "air_quality",
+                        "enabled": True,
+                        "severity": "critical",
+                        "title": "Unhealthy Air Quality",
+                        "message": "Air quality is unhealthy (AQI: {aqi}). PM2.5: {pm2_5} μg/m³",
+                        "condition": {
+                            "aqi_above": 150,
+                            "aqi_level_in": ["Unhealthy", "Very Unhealthy", "Hazardous"]
+                        }
+                    },
+                    {
+                        "type": "system_health",
+                        "enabled": True,
+                        "severity": "warning",
+                        "title": "High CPU Temperature",
+                        "message": "CPU temperature is high: {cpu_temp}°C",
+                        "condition": {
+                            "cpu_temp_above": 70
+                        }
+                    },
+                    {
+                        "type": "system_health",
+                        "enabled": True,
+                        "severity": "critical",
+                        "title": "Critical CPU Temperature",
+                        "message": "CPU temperature is critical: {cpu_temp}°C",
+                        "condition": {
+                            "cpu_temp_above": 80
+                        }
+                    },
+                    {
+                        "type": "sensor_failure",
+                        "enabled": True,
+                        "severity": "critical",
+                        "title": "Sensor Failure Detected",
+                        "message": "Air quality sensor has failed or is not responding"
+                    },
+                    {
+                        "type": "data_staleness",
+                        "enabled": True,
+                        "severity": "warning",
+                        "title": "Stale Data Warning",
+                        "message": "Air quality data is stale (last update: {age_minutes} minutes ago)"
+                    }
+                ],
+                "rate_limits": {
+                    "air_quality_warning": 30,
+                    "air_quality_critical": 15,
+                    "system_health_warning": 30,
+                    "system_health_critical": 15,
+                    "sensor_failure_critical": 5,
+                    "data_staleness_warning": 30
                 }
             }
         }
@@ -150,6 +245,27 @@ class Config:
     def get_forecast_days(self) -> int:
         """Get number of forecast days to retrieve"""
         return self.get('forecast.forecast_days', 3)
+    
+    @property
+    def alerts(self) -> Dict[str, Any]:
+        """Get alerts configuration"""
+        return self._config.get('alerts', {})
+    
+    def is_alerts_enabled(self) -> bool:
+        """Check if alerting is enabled"""
+        return self.get('alerts.enabled', False)
+    
+    def get_alert_notifications(self) -> Dict[str, Any]:
+        """Get alert notification configuration"""
+        return self.get('alerts.notifications', {})
+    
+    def get_alert_rules(self) -> List[Dict[str, Any]]:
+        """Get alert rules configuration"""
+        return self.get('alerts.rules', [])
+    
+    def get_alert_rate_limits(self) -> Dict[str, int]:
+        """Get alert rate limits configuration"""
+        return self.get('alerts.rate_limits', {})
 
 # Global configuration instance
 config = Config()

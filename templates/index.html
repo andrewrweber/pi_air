@@ -6,6 +6,7 @@
     <title>Raspberry Pi System Monitor</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -111,6 +112,15 @@
                         <button id="particles-6h-btn" class="chart-btn" onclick="showParticlesData('6h')">6 Hours</button>
                         <button id="particles-24h-btn" class="chart-btn active" onclick="showParticlesData('24h')">24 Hours</button>
                     </div>
+                    <div class="chart-tools">
+                        <button class="chart-tool-btn" onclick="window.chartManager.resetZoom('particles')" title="Reset Zoom">🔍</button>
+                        <button class="chart-tool-btn" onclick="window.chartManager.downloadChartData('particles', 'csv')" title="Export CSV">📊</button>
+                        <button class="chart-tool-btn" onclick="window.chartManager.downloadChartData('particles', 'json')" title="Export JSON">📋</button>
+                    </div>
+                    <div class="who-guidelines-info">
+                        <strong>WHO Guidelines:</strong> PM2.5 Daily: 15 μg/m³, Annual: 5 μg/m³ | PM10 Daily: 45 μg/m³, Annual: 15 μg/m³
+                        <br><small>Dashed lines show WHO daily limits. Scroll/pinch to zoom, drag to pan.</small>
+                    </div>
                     
                     <h2 style="margin-top: 2rem;" id="aqi-chart-title">Air Quality Index (24 hours, 15-minute intervals)</h2>
                     <div style="position: relative; height:300px; width:100%;">
@@ -120,6 +130,11 @@
                         <button id="aqi-1h-btn" class="chart-btn" onclick="showAQIData('1h')">1 Hour</button>
                         <button id="aqi-6h-btn" class="chart-btn" onclick="showAQIData('6h')">6 Hours</button>
                         <button id="aqi-24h-btn" class="chart-btn active" onclick="showAQIData('24h')">24 Hours</button>
+                    </div>
+                    <div class="chart-tools">
+                        <button class="chart-tool-btn" onclick="window.chartManager.resetZoom('aqi')" title="Reset Zoom">🔍</button>
+                        <button class="chart-tool-btn" onclick="window.chartManager.downloadChartData('aqi', 'csv')" title="Export CSV">📊</button>
+                        <button class="chart-tool-btn" onclick="window.chartManager.downloadChartData('aqi', 'json')" title="Export JSON">📋</button>
                     </div>
                     <div class="db-stats" id="db-stats"></div>
                 </div>
@@ -170,6 +185,8 @@
     <script src="{{ url_for('static', filename='js/config.js') }}"></script>
     <script src="{{ url_for('static', filename='js/utils.js') }}"></script>
     <script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/analytics.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/comparison.js') }}"></script>
     <script src="{{ url_for('static', filename='js/hardware.js') }}"></script>
     <script src="{{ url_for('static', filename='js/air-quality.js') }}"></script>
     <script src="{{ url_for('static', filename='js/forecast.js') }}"></script>

@@ -1,0 +1,96 @@
+{
+  "alerts": {
+    "enabled": true,
+    "default_rate_limit_minutes": 15,
+    "max_history_size": 100,
+    "notifications": {
+      "log": {
+        "enabled": true,
+        "level": "info"
+      },
+      "email": {
+        "enabled": false
+      },
+      "webhook": {
+        "enabled": true,
+        "url": "https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK",
+        "timeout": 10,
+        "headers": {
+          "Content-Type": "application/json"
+        },
+        "custom_fields": {
+          "channel": "#air-quality-alerts",
+          "username": "Pi Air Monitor",
+          "icon_emoji": ":warning:"
+        }
+      }
+    },
+    "rules": [
+      {
+        "type": "air_quality",
+        "enabled": true,
+        "severity": "info",
+        "title": "Air Quality Update",
+        "message": "🟡 Air quality is now {aqi_level} (AQI: {aqi}, PM2.5: {pm2_5} μg/m³)",
+        "condition": {
+          "aqi_above": 50,
+          "aqi_level_in": ["Moderate"]
+        }
+      },
+      {
+        "type": "air_quality",
+        "enabled": true,
+        "severity": "warning",
+        "title": "Air Quality Warning",
+        "message": "🟠 Air quality is {aqi_level} (AQI: {aqi}, PM2.5: {pm2_5} μg/m³). Sensitive individuals should limit outdoor exposure.",
+        "condition": {
+          "aqi_above": 100,
+          "aqi_level_in": ["Unhealthy for Sensitive Groups"]
+        }
+      },
+      {
+        "type": "air_quality",
+        "enabled": true,
+        "severity": "critical",
+        "title": "Air Quality Alert",
+        "message": "🔴 Air quality is {aqi_level} (AQI: {aqi}, PM2.5: {pm2_5} μg/m³). Everyone should reduce outdoor activities.",
+        "condition": {
+          "aqi_above": 150,
+          "aqi_level_in": ["Unhealthy", "Very Unhealthy", "Hazardous"]
+        }
+      },
+      {
+        "type": "system_health",
+        "enabled": true,
+        "severity": "warning",
+        "title": "System Health Warning",
+        "message": "⚠️ Pi Air Monitor system health issue: CPU temperature {cpu_temp}°C",
+        "condition": {
+          "cpu_temp_above": 70
+        }
+      },
+      {
+        "type": "sensor_failure",
+        "enabled": true,
+        "severity": "critical",
+        "title": "Sensor Failure",
+        "message": "❌ Air quality sensor has failed. No data is being collected."
+      },
+      {
+        "type": "data_staleness",
+        "enabled": true,
+        "severity": "warning",
+        "title": "Data Staleness Warning",
+        "message": "⏰ Air quality data is stale ({age_minutes} minutes old). Check sensor connection."
+      }
+    ],
+    "rate_limits": {
+      "air_quality_info": 60,
+      "air_quality_warning": 30,
+      "air_quality_critical": 15,
+      "system_health_warning": 30,
+      "sensor_failure_critical": 5,
+      "data_staleness_warning": 30
+    }
+  }
+}

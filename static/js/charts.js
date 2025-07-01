@@ -1,11 +1,53 @@
 /**
- * Chart management for Pi Air Monitor
+ * Enhanced Chart management for Pi Air Monitor
+ * Features: WHO guidelines, zoom/pan, trend analysis, data export
  */
 
 class ChartManager {
     constructor() {
         this.charts = {};
+        this.whoGuidelines = this.initializeWHOGuidelines();
+        this.loadingStates = {};
+        this.errorStates = {};
+        this.dataCache = {};
+        
+        // Register Chart.js plugins
+        this.registerPlugins();
+        
         this.initializeCharts();
+    }
+
+    /**
+     * Register Chart.js plugins
+     */
+    registerPlugins() {
+        if (typeof Chart !== 'undefined' && window.zoomPlugin) {
+            Chart.register(window.zoomPlugin);
+        }
+    }
+
+    /**
+     * Initialize WHO Air Quality Guidelines
+     */
+    initializeWHOGuidelines() {
+        return {
+            pm25: {
+                daily: 15,      // μg/m³ 24-hour mean
+                annual: 5,      // μg/m³ annual mean
+                label: 'WHO PM2.5 Guidelines',
+                color: 'rgba(255, 165, 0, 0.7)',
+                dailyLabel: 'WHO Daily (15 μg/m³)',
+                annualLabel: 'WHO Annual (5 μg/m³)'
+            },
+            pm10: {
+                daily: 45,      // μg/m³ 24-hour mean
+                annual: 15,     // μg/m³ annual mean
+                label: 'WHO PM10 Guidelines',
+                color: 'rgba(255, 140, 0, 0.7)',
+                dailyLabel: 'WHO Daily (45 μg/m³)',
+                annualLabel: 'WHO Annual (15 μg/m³)'
+            }
+        };
     }
 
     /**
@@ -164,7 +206,7 @@ class ChartManager {
     }
 
     /**
-     * Initialize particles chart
+     * Initialize particles chart with WHO guidelines and advanced features
      */
     initializeParticlesChart() {
         const ctx = document.getElementById('particlesChart').getContext('2d');
@@ -181,7 +223,10 @@ class ChartManager {
                         borderColor: 'rgb(255, 99, 132)',
                         backgroundColor: 'rgba(255, 99, 132, 0.1)',
                         tension: 0.1,
-                        spanGaps: true
+                        spanGaps: true,
+                        pointRadius: 0,
+                        pointHoverRadius: 6,
+                        borderWidth: 2
                     },
                     {
                         label: 'PM10 (μg/m³)',
@@ -189,7 +234,10 @@ class ChartManager {
                         borderColor: 'rgb(54, 162, 235)',
                         backgroundColor: 'rgba(54, 162, 235, 0.1)',
                         tension: 0.1,
-                        spanGaps: true
+                        spanGaps: true,
+                        pointRadius: 0,
+                        pointHoverRadius: 6,
+                        borderWidth: 2
                     },
                     {
                         label: 'PM1.0 (μg/m³)',
@@ -198,7 +246,37 @@ class ChartManager {
                         backgroundColor: 'rgba(255, 205, 86, 0.1)',
                         tension: 0.1,
                         spanGaps: true,
-                        hidden: true  // Hidden by default
+                        hidden: true,  // Hidden by default
+                        pointRadius: 0,
+                        pointHoverRadius: 6,
+                        borderWidth: 2
+                    },
+                    // WHO PM2.5 Daily Guideline
+                    {
+                        label: this.whoGuidelines.pm25.dailyLabel,
+                        data: [],
+                        borderColor: this.whoGuidelines.pm25.color,
+                        backgroundColor: 'transparent',
+                        borderDash: [5, 5],
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        fill: false,
+                        spanGaps: true,
+                        tension: 0
+                    },
+                    // WHO PM10 Daily Guideline
+                    {
+                        label: this.whoGuidelines.pm10.dailyLabel,
+                        data: [],
+                        borderColor: this.whoGuidelines.pm10.color,
+                        backgroundColor: 'transparent',
+                        borderDash: [5, 5],
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        fill: false,
+                        spanGaps: true,
+                        tension: 0,
+                        hidden: true  // Hidden by default since PM10 is secondary
                     }
                 ]
             },
@@ -208,6 +286,57 @@ class ChartManager {
                 interaction: {
                     mode: 'index',
                     intersect: false,
+                },
+                // Enable zoom and pan
+                plugins: {
+                    zoom: {
+                        zoom: {
+                            wheel: {
+                                enabled: !isMobile,
+                                speed: 0.1
+                            },
+                            pinch: {
+                                enabled: isMobile
+                            },
+                            mode: 'x'
+                        },
+                        pan: {
+                            enabled: true,
+                            mode: 'x',
+                            onPanComplete: ({chart}) => {
+                                this.updateChartAnalytics('particles');
+                            }
+                        },
+                        limits: {
+                            x: {min: 'original', max: 'original'}
+                        }
+                    },
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true,
+                            padding: window.innerWidth < 768 ? 8 : 15,
+                            font: {
+                                size: window.innerWidth < 768 ? 10 : 12
+                            },
+                            boxWidth: window.innerWidth < 768 ? 8 : 12,
+                            filter: (legendItem, data) => {
+                                // Show/hide WHO guidelines based on mobile view
+                                if (isMobile && legendItem.text.includes('WHO')) {
+                                    return false;
+                                }
+                                return true;
+                            }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            afterBody: (context) => {
+                                return this.generateTooltipAnalytics(context, 'particles');
+                            }
+                        }
+                    }
                 },
                 scales: {
                     x: {
@@ -244,20 +373,6 @@ class ChartManager {
                             font: {
                                 size: window.innerWidth < 768 ? 9 : 11
                             }
-                        }
-                    }
-                },
-                plugins: {
-                    legend: {
-                        display: true,
-                        position: 'top',
-                        labels: {
-                            usePointStyle: true,
-                            padding: window.innerWidth < 768 ? 8 : 15,
-                            font: {
-                                size: window.innerWidth < 768 ? 10 : 12
-                            },
-                            boxWidth: window.innerWidth < 768 ? 8 : 12
                         }
                     }
                 },
@@ -456,6 +571,244 @@ class ChartManager {
     }
 
     /**
+     * Update chart with WHO guidelines
+     * @param {string} chartName - Name of the chart
+     * @param {Array} labels - Chart labels
+     * @param {Array|Object} data - Chart data
+     * @param {string} updateMode - Update animation mode
+     */
+    updateChartWithGuidelines(chartName, labels, data, updateMode = 'none') {
+        const chart = this.charts[chartName];
+        if (!chart) return;
+
+        // Update main data
+        this.updateChart(chartName, labels, data, updateMode);
+
+        // Update WHO guideline data if applicable
+        if (chartName === 'particles') {
+            const pm25GuidelineIndex = 3; // WHO PM2.5 Daily guideline dataset
+            const pm10GuidelineIndex = 4; // WHO PM10 Daily guideline dataset
+            
+            // Fill WHO guideline arrays with constant values
+            const pm25GuidelineData = new Array(labels.length).fill(this.whoGuidelines.pm25.daily);
+            const pm10GuidelineData = new Array(labels.length).fill(this.whoGuidelines.pm10.daily);
+            
+            if (chart.data.datasets[pm25GuidelineIndex]) {
+                chart.data.datasets[pm25GuidelineIndex].data = pm25GuidelineData;
+            }
+            if (chart.data.datasets[pm10GuidelineIndex]) {
+                chart.data.datasets[pm10GuidelineIndex].data = pm10GuidelineData;
+            }
+        }
+
+        chart.update(updateMode);
+    }
+
+    /**
+     * Generate tooltip analytics for enhanced information
+     * @param {Array} context - Chart.js tooltip context
+     * @param {string} chartType - Type of chart
+     * @returns {Array} Additional tooltip lines
+     */
+    generateTooltipAnalytics(context, chartType) {
+        if (!context || context.length === 0) return [];
+        
+        const dataIndex = context[0].dataIndex;
+        const chart = context[0].chart;
+        const analytics = [];
+
+        if (chartType === 'particles') {
+            const pm25Data = chart.data.datasets[0]?.data;
+            const pm10Data = chart.data.datasets[1]?.data;
+            
+            if (pm25Data && pm25Data[dataIndex] !== undefined) {
+                const pm25Value = pm25Data[dataIndex];
+                const who25Daily = this.whoGuidelines.pm25.daily;
+                const who25Annual = this.whoGuidelines.pm25.annual;
+                
+                if (pm25Value > who25Daily) {
+                    analytics.push(`⚠️ Above WHO daily guideline (${who25Daily} μg/m³)`);
+                } else if (pm25Value > who25Annual) {
+                    analytics.push(`⚠️ Above WHO annual guideline (${who25Annual} μg/m³)`);
+                } else {
+                    analytics.push(`✓ Within WHO guidelines`);
+                }
+            }
+
+            // Add trend information if available
+            const trend = this.calculateTrend(chart.data.datasets[0]?.data, dataIndex);
+            if (trend) {
+                analytics.push(`Trend: ${trend}`);
+            }
+        }
+
+        return analytics;
+    }
+
+    /**
+     * Calculate trend for data point
+     * @param {Array} data - Data array
+     * @param {number} index - Current index
+     * @returns {string} Trend description
+     */
+    calculateTrend(data, index) {
+        if (!data || index < 3) return null;
+        
+        const current = data[index];
+        const prev1 = data[index - 1];
+        const prev2 = data[index - 2];
+        const prev3 = data[index - 3];
+        
+        if ([current, prev1, prev2, prev3].some(v => v === null || v === undefined)) {
+            return null;
+        }
+
+        const shortTrend = current - prev1;
+        const mediumTrend = (current + prev1) / 2 - (prev2 + prev3) / 2;
+        
+        if (Math.abs(shortTrend) < 1) {
+            return 'Stable';
+        } else if (shortTrend > 0 && mediumTrend > 0) {
+            return 'Rising ↗';
+        } else if (shortTrend < 0 && mediumTrend < 0) {
+            return 'Falling ↘';
+        } else {
+            return shortTrend > 0 ? 'Rising ↗' : 'Falling ↘';
+        }
+    }
+
+    /**
+     * Update chart analytics display
+     * @param {string} chartName - Name of the chart
+     */
+    updateChartAnalytics(chartName) {
+        const chart = this.charts[chartName];
+        if (!chart) return;
+
+        // This would be called when pan/zoom completes
+        // Can be used to show visible data statistics
+        console.log(`Updated analytics for ${chartName}`);
+    }
+
+    /**
+     * Export chart data
+     * @param {string} chartName - Name of the chart
+     * @param {string} format - Export format ('csv' or 'json')
+     * @returns {string} Exported data
+     */
+    exportChartData(chartName, format = 'csv') {
+        const chart = this.charts[chartName];
+        if (!chart) return null;
+
+        const data = {
+            labels: chart.data.labels,
+            datasets: chart.data.datasets.map(dataset => ({
+                label: dataset.label,
+                data: dataset.data
+            }))
+        };
+
+        if (format === 'json') {
+            return JSON.stringify(data, null, 2);
+        } else if (format === 'csv') {
+            return this.convertToCSV(data);
+        }
+
+        return null;
+    }
+
+    /**
+     * Convert chart data to CSV format
+     * @param {Object} data - Chart data object
+     * @returns {string} CSV string
+     */
+    convertToCSV(data) {
+        if (!data.labels || !data.datasets) return '';
+
+        const headers = ['Time', ...data.datasets.map(d => d.label)];
+        const rows = data.labels.map((label, index) => {
+            const values = data.datasets.map(dataset => {
+                const value = dataset.data[index];
+                return value !== null && value !== undefined ? value : '';
+            });
+            return [label, ...values];
+        });
+
+        return [headers, ...rows]
+            .map(row => row.map(cell => `"${cell}"`).join(','))
+            .join('\n');
+    }
+
+    /**
+     * Download chart data as file
+     * @param {string} chartName - Name of the chart
+     * @param {string} format - File format ('csv' or 'json')
+     */
+    downloadChartData(chartName, format = 'csv') {
+        const data = this.exportChartData(chartName, format);
+        if (!data) return;
+
+        const blob = new Blob([data], { 
+            type: format === 'json' ? 'application/json' : 'text/csv' 
+        });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        
+        link.href = url;
+        link.download = `pi-air-${chartName}-${new Date().toISOString().split('T')[0]}.${format}`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }
+
+    /**
+     * Reset chart zoom
+     * @param {string} chartName - Name of the chart
+     */
+    resetZoom(chartName) {
+        const chart = this.charts[chartName];
+        if (chart && chart.resetZoom) {
+            chart.resetZoom();
+        }
+    }
+
+    /**
+     * Show loading state for chart
+     * @param {string} chartName - Name of the chart
+     */
+    showLoading(chartName) {
+        this.loadingStates[chartName] = true;
+        // You could add visual loading indicators here
+    }
+
+    /**
+     * Hide loading state for chart
+     * @param {string} chartName - Name of the chart
+     */
+    hideLoading(chartName) {
+        this.loadingStates[chartName] = false;
+    }
+
+    /**
+     * Show error state for chart
+     * @param {string} chartName - Name of the chart
+     * @param {string} message - Error message
+     */
+    showError(chartName, message) {
+        this.errorStates[chartName] = message;
+        // You could add visual error indicators here
+    }
+
+    /**
+     * Clear error state for chart
+     * @param {string} chartName - Name of the chart
+     */
+    clearError(chartName) {
+        delete this.errorStates[chartName];
+    }
+
+    /**
      * Destroy all charts (for cleanup)
      */
     destroy() {
@@ -463,6 +816,9 @@ class ChartManager {
             if (chart) chart.destroy();
         });
         this.charts = {};
+        this.loadingStates = {};
+        this.errorStates = {};
+        this.dataCache = {};
     }
 }
 

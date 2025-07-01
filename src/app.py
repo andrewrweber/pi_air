@@ -18,6 +18,8 @@ from database import (get_latest_reading, get_hourly_averages_24h, get_15min_ave
 from services.forecast_service import forecast_service
 from config import config
 from utils.timestamp_utils import TimestampUtils, utc_now, utc_now_iso
+from alert_integration import (get_alert_history, get_alert_stats, send_test_alert, 
+                              test_alert_notifications, is_alerting_enabled, check_system_health_alerts)
 
 app = Flask(__name__, 
             template_folder='../templates',
@@ -726,6 +728,111 @@ def forecast_cache_clear_api():
         
     except Exception as e:
         logger.error(f"Error in forecast_cache_clear_api: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/alerts/status')
+def alerts_status_api():
+    """Get alert system status and statistics"""
+    try:
+        stats = get_alert_stats()
+        
+        return jsonify({
+            'status': 'success',
+            'data': stats,
+            'timestamp': utc_now_iso()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in alerts_status_api: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/alerts/history')
+def alerts_history_api():
+    """Get alert history"""
+    try:
+        limit = request.args.get('limit', 50, type=int)
+        history = get_alert_history(limit)
+        
+        return jsonify({
+            'status': 'success',
+            'data': history,
+            'count': len(history),
+            'timestamp': utc_now_iso()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in alerts_history_api: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/alerts/test', methods=['POST'])
+def alerts_test_api():
+    """Send a test alert"""
+    try:
+        if not is_alerting_enabled():
+            return jsonify({
+                'status': 'error',
+                'message': 'Alerting is not enabled'
+            }), 400
+        
+        success = send_test_alert()
+        
+        return jsonify({
+            'status': 'success' if success else 'error',
+            'message': 'Test alert sent successfully' if success else 'Failed to send test alert',
+            'timestamp': utc_now_iso()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in alerts_test_api: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/alerts/test-notifications')
+def alerts_test_notifications_api():
+    """Test all notification methods"""
+    try:
+        if not is_alerting_enabled():
+            return jsonify({
+                'status': 'error',
+                'message': 'Alerting is not enabled'
+            }), 400
+        
+        results = test_alert_notifications()
+        
+        return jsonify({
+            'status': 'success',
+            'data': results,
+            'timestamp': utc_now_iso()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in alerts_test_notifications_api: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/alerts/check-system', methods=['POST'])
+def alerts_check_system_api():
+    """Manually trigger system health alert check"""
+    try:
+        if not is_alerting_enabled():
+            return jsonify({
+                'status': 'error',
+                'message': 'Alerting is not enabled'
+            }), 400
+        
+        # Get current system data
+        system_data = get_system_data()
+        
+        # Check for system health alerts
+        alerts = check_system_health_alerts(system_data)
+        
+        return jsonify({
+            'status': 'success',
+            'message': f'System health check completed, {len(alerts)} alerts triggered',
+            'alerts_triggered': len(alerts),
+            'timestamp': utc_now_iso()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in alerts_check_system_api: {e}")
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':

@@ -217,14 +217,14 @@ class TestPMS7003Detailed:
             sensor._parse_data(short_frame)
     
     def test_calculate_aqi_ranges(self):
-        """Test AQI calculation for different PM2.5 ranges"""
+        """Test AQI calculation for different PM2.5 ranges (EPA 2024 standards)"""
         sensor = pms7003.PMS7003()
         
-        # Test Good range (0-12 μg/m³)
+        # Test Good range (0-9.0 μg/m³) - Updated for EPA 2024 standards
         assert sensor._calculate_aqi(0) == 0
-        assert sensor._calculate_aqi(12) == 50
+        assert sensor._calculate_aqi(9.0) == 50
         
-        # Test Moderate range (12.1-35.4 μg/m³)
+        # Test Moderate range (9.1-35.4 μg/m³) - Updated for EPA 2024 standards
         aqi_moderate = sensor._calculate_aqi(25)
         assert 51 <= aqi_moderate <= 100
         
@@ -248,18 +248,18 @@ class TestPMS7003Detailed:
         assert sensor._get_aqi_level(350) == "Hazardous"
     
     def test_linear_scale_calculation(self):
-        """Test linear scaling function"""
+        """Test linear scaling function (EPA 2024 standards)"""
         sensor = pms7003.PMS7003()
         
-        # Test linear interpolation
-        result = sensor._linear_scale(25, 12.1, 35.4, 51, 100)
+        # Test linear interpolation with updated EPA 2024 breakpoints
+        result = sensor._linear_scale(25, 9.1, 35.4, 51, 100)
         
         # Should be between 51 and 100
         assert 51 <= result <= 100
         
-        # Test exact boundaries
-        assert sensor._linear_scale(12.1, 12.1, 35.4, 51, 100) == 51
-        assert sensor._linear_scale(35.4, 12.1, 35.4, 51, 100) == 100
+        # Test exact boundaries with updated EPA 2024 breakpoints
+        assert sensor._linear_scale(9.1, 9.1, 35.4, 51, 100) == 51
+        assert sensor._linear_scale(35.4, 9.1, 35.4, 51, 100) == 100
     
     @patch('serial.Serial')
     @patch('threading.Thread')

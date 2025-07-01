@@ -59,9 +59,19 @@ class AirQualityMonitor {
      * Update latest air quality reading
      */
     async updateLatestReading() {
-        const data = await this.utils.fetchData(this.config.API_ENDPOINTS.airQualityLatest);
-        if (!data || !data.latest_reading) {
-            this.setNoDataState();
+        try {
+            this.showLoadingState('current-reading');
+            const data = await this.utils.fetchData(this.config.API_ENDPOINTS.airQualityLatest);
+            
+            if (!data || !data.latest_reading) {
+                this.setNoDataState();
+                return;
+            }
+            
+            this.hideLoadingState('current-reading');
+        } catch (error) {
+            console.error('Error updating latest reading:', error);
+            this.showErrorState('current-reading', 'Failed to load current air quality data');
             return;
         }
 
@@ -260,7 +270,7 @@ class AirQualityMonitor {
         const particlesChart = this.chartManager.getChart('particles');
         particlesChart.options.scales.y.suggestedMax = Math.ceil(maxPM * 1.2);
         
-        this.chartManager.updateChart('particles', labels, {
+        this.chartManager.updateChartWithGuidelines('particles', labels, {
             pm25: pm25Data,
             pm10: pm10Data,
             pm1: pm1Data
@@ -455,6 +465,47 @@ class AirQualityMonitor {
         // Expose methods to global scope for button onclick handlers
         window.showParticlesData = (range) => this.showParticlesData(range);
         window.showAQIData = (range) => this.showAQIData(range);
+    }
+
+    /**
+     * Show loading state for a section
+     * @param {string} section - Section identifier
+     */
+    showLoadingState(section) {
+        if (section === 'current-reading') {
+            // Show subtle loading indication for current readings
+            const aqiValue = document.getElementById('aqi-value');
+            if (aqiValue && !aqiValue.classList.contains('loading')) {
+                aqiValue.classList.add('loading');
+                aqiValue.style.opacity = '0.7';
+            }
+        }
+    }
+
+    /**
+     * Hide loading state for a section
+     * @param {string} section - Section identifier
+     */
+    hideLoadingState(section) {
+        if (section === 'current-reading') {
+            const aqiValue = document.getElementById('aqi-value');
+            if (aqiValue) {
+                aqiValue.classList.remove('loading');
+                aqiValue.style.opacity = '1';
+            }
+        }
+    }
+
+    /**
+     * Show error state for a section
+     * @param {string} section - Section identifier
+     * @param {string} message - Error message
+     */
+    showErrorState(section, message) {
+        if (section === 'current-reading') {
+            this.setNoDataState();
+            // You could add more specific error UI here
+        }
     }
 }
 

@@ -25,6 +25,8 @@ class PiAirMonitorApp {
             this.hardwareMonitor = window.hardwareMonitor;
             this.airQualityMonitor = window.airQualityMonitor;
             this.forecastManager = window.forecastManager;
+            this.analyticsManager = window.analyticsManager;
+            this.comparisonManager = window.comparisonManager;
             
             // Set up tab navigation
             this.setupTabNavigation();
@@ -33,6 +35,8 @@ class PiAirMonitorApp {
             this.hardwareMonitor.start();
             this.airQualityMonitor.start();
             this.forecastManager.start();
+            this.analyticsManager.start();
+            this.comparisonManager.start();
             
             // Show initial tab (air-quality is default)
             this.showTab('air-quality');
@@ -61,6 +65,8 @@ class PiAirMonitorApp {
             if (window.AppConfig && 
                 window.Utils && 
                 window.chartManager && 
+                window.analyticsManager &&
+                window.comparisonManager &&
                 window.hardwareMonitor && 
                 window.airQualityMonitor &&
                 window.forecastManager &&

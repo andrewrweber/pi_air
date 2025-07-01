@@ -186,12 +186,13 @@ class PMS7003:
         return None
     
     def _calculate_aqi(self, pm25):
-        """Calculate AQI from PM2.5 value"""
-        # EPA AQI breakpoints for PM2.5
-        if pm25 <= 12.0:
-            return self._linear_scale(pm25, 0, 12.0, 0, 50)
+        """Calculate AQI from PM2.5 value using EPA 2024 standards"""
+        # EPA AQI breakpoints for PM2.5 (Updated May 2024)
+        # Updated "Good" category from 0-12.0 to 0-9.0 μg/m³
+        if pm25 <= 9.0:
+            return self._linear_scale(pm25, 0, 9.0, 0, 50)
         elif pm25 <= 35.4:
-            return self._linear_scale(pm25, 12.1, 35.4, 51, 100)
+            return self._linear_scale(pm25, 9.1, 35.4, 51, 100)
         elif pm25 <= 55.4:
             return self._linear_scale(pm25, 35.5, 55.4, 101, 150)
         elif pm25 <= 150.4:
