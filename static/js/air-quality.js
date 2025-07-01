@@ -59,9 +59,10 @@ class AirQualityMonitor {
      * Update latest air quality reading
      */
     async updateLatestReading() {
+        let data;
         try {
             this.showLoadingState('current-reading');
-            const data = await this.utils.fetchData(this.config.API_ENDPOINTS.airQualityLatest);
+            data = await this.utils.fetchData(this.config.API_ENDPOINTS.airQualityLatest);
             
             if (!data || !data.latest_reading) {
                 this.setNoDataState();
